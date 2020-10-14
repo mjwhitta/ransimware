@@ -59,12 +59,10 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	// Stream file
 	for {
 		// Read file
-		if n, e = f.Read(contents[:]); e != nil {
-			if (n == 0) && (e == io.EOF) {
-				f.Close()
-			} else {
-				return
-			}
+		if n, e = f.Read(contents[:]); (n == 0) && (e == io.EOF) {
+			f.Close()
+		} else if e != nil {
+			return
 		}
 
 		// Turn file contents into garbage

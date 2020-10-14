@@ -19,4 +19,4 @@ var DefaultPNG []byte
 var ReadSize int = 4 * 1024 * 1024
 
 // Version is the package version
-const Version = "0.1.0"
+const Version = "0.1.1"
