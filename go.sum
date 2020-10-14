@@ -1,0 +1,12 @@
+gitlab.com/mjwhitta/cli v1.8.0 h1:o1u9B9tGOfakhqX3nVBAT7DLS1Ug95Cez9DGwwLrewE=
+gitlab.com/mjwhitta/cli v1.8.0/go.mod h1:0nzOLJZWsbgzJp/EQoLHcCLvKXX/iakyOZIqg94xAzo=
+gitlab.com/mjwhitta/hilighter v1.9.1 h1:YlUCB1jWYVtwwfQ4DFvwXULmvH3Bu9ELlTkS5+jzZgQ=
+gitlab.com/mjwhitta/hilighter v1.9.1/go.mod h1:/hkHOgezVQbk/eoif5CRCK2/N0aeEK40VQh8znGsjpE=
+gitlab.com/mjwhitta/log v1.4.2 h1:xrz+imhjjz+v+8djmbCXMSX5Hz88IIbV0ZzFbvXeaeM=
+gitlab.com/mjwhitta/log v1.4.2/go.mod h1:iOdtHoTqI7dSVZMazfnz8Ap5GPHNHkeuzzJO2DNAAYU=
+gitlab.com/mjwhitta/pathname v1.0.6 h1:hboITLPbJigX9WvKD6pv+Ay4w9zleOHnmJtGswBoYXg=
+gitlab.com/mjwhitta/pathname v1.0.6/go.mod h1:DDc1eLhCHMHYMttam61vgyKGya/IIs2IDOTkr6GyFhs=
+gitlab.com/mjwhitta/threadpool v1.2.0 h1:J5xOxDx5X6C/4nSenAy/3tWdbyRpIOvoFQWF08rUTd8=
+gitlab.com/mjwhitta/threadpool v1.2.0/go.mod h1:2fSj7Psi52Ymza9kudtRo61wj2Uib2mYQTISY4iYG4Y=
+golang.org/x/sys v0.0.0-20201013132646-2da7054afaeb h1:HS9IzC4UFbpMBLQUDSQcU+ViVT1vdFCQVjdPVpTlZrs=
+golang.org/x/sys v0.0.0-20201013132646-2da7054afaeb/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
