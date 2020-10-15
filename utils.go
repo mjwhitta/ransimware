@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"io"
@@ -34,7 +33,7 @@ func AESDecrypt(passwd string) EncryptFunc {
 	return func(fn string, b []byte) ([]byte, error) {
 		var block cipher.Block
 		var e error
-		var iv []byte
+		var iv [sha256.Size]byte = sha256.Sum256([]byte("redteam"))
 		var key [sha256.Size]byte = sha256.Sum256([]byte(passwd))
 		var stream cipher.Stream
 
@@ -46,10 +45,14 @@ func AESDecrypt(passwd string) EncryptFunc {
 			return b, e
 		}
 
-		iv = b[:aes.BlockSize]
+		for i := 0; i < aes.BlockSize; i++ {
+			if iv[i] != b[i] {
+				return b, nil
+			}
+		}
 		b = b[aes.BlockSize:]
 
-		stream = cipher.NewCFBDecrypter(block, iv)
+		stream = cipher.NewCFBDecrypter(block, iv[:aes.BlockSize])
 		stream.XORKeyStream(b, b)
 
 		return b, nil
@@ -63,7 +66,7 @@ func AESEncrypt(passwd string) EncryptFunc {
 		var block cipher.Block
 		var ctxt []byte
 		var e error
-		var iv []byte
+		var iv [sha256.Size]byte = sha256.Sum256([]byte("redteam"))
 		var key [sha256.Size]byte = sha256.Sum256([]byte(passwd))
 		var stream cipher.Stream
 
@@ -72,13 +75,11 @@ func AESEncrypt(passwd string) EncryptFunc {
 		}
 
 		ctxt = make([]byte, aes.BlockSize+len(b))
-		iv = ctxt[:aes.BlockSize]
-
-		if _, e = rand.Read(iv); e != nil {
-			return b, e
+		for i := 0; i < aes.BlockSize; i++ {
+			ctxt[i] = iv[i]
 		}
 
-		stream = cipher.NewCFBEncrypter(block, iv)
+		stream = cipher.NewCFBEncrypter(block, iv[:aes.BlockSize])
 		stream.XORKeyStream(ctxt[aes.BlockSize:], b)
 
 		return ctxt, nil
