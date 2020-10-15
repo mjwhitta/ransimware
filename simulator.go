@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"gitlab.com/mjwhitta/pathname"
 	tp "gitlab.com/mjwhitta/threadpool"
@@ -13,12 +14,14 @@ import (
 
 // Simulator is a struct containing all simulation metadata.
 type Simulator struct {
-	Encrypt func(fn string, b []byte) ([]byte, error)
-	Exfil   func(fn string, b []byte) error
-	Notify  func() error
-	OTP     [32]byte
-	paths   []string
-	Threads int
+	Encrypt  func(fn string, b []byte) ([]byte, error)
+	excludes []*regexp.Regexp
+	Exfil    func(fn string, b []byte) error
+	includes []*regexp.Regexp
+	Notify   func() error
+	OTP      [32]byte
+	paths    []string
+	Threads  int
 }
 
 // New will return a pointer to a new Simulator instance.
@@ -40,6 +43,34 @@ func New(threads int) *Simulator {
 	}
 
 	return s
+}
+
+// Exclude will add the specified pattern to the do-not-target list.
+func (s *Simulator) Exclude(pattern string) error {
+	var e error
+	var r *regexp.Regexp
+
+	// Ensure valid regex
+	if r, e = regexp.Compile(pattern); e != nil {
+		return e
+	}
+
+	s.excludes = append(s.excludes, r)
+	return nil
+}
+
+// Include will add the specified pattern to the target list.
+func (s *Simulator) Include(pattern string) error {
+	var e error
+	var r *regexp.Regexp
+
+	// Ensure valid regex
+	if r, e = regexp.Compile(pattern); e != nil {
+		return e
+	}
+
+	s.includes = append(s.includes, r)
+	return nil
 }
 
 func (s *Simulator) processFile(tid int, data tp.ThreadData) {
@@ -95,6 +126,7 @@ func (s *Simulator) Target(path string) error {
 // Run will start the simulator.
 func (s *Simulator) Run() error {
 	var e error
+	var include bool
 	var pool *tp.ThreadPool
 
 	// Initialize ThreadPool
@@ -122,6 +154,25 @@ func (s *Simulator) Run() error {
 				// Ignore files larger than MaxSize
 				if info.Size() > MaxSize {
 					return nil
+				}
+
+				// Check includes and excludes
+				include = len(s.includes) == 0
+				for _, r := range s.includes {
+					if r.MatchString(path) {
+						include = true
+						break
+					}
+				}
+
+				if !include {
+					return nil
+				}
+
+				for _, r := range s.excludes {
+					if r.MatchString(path) {
+						return nil
+					}
 				}
 
 				// Process file
