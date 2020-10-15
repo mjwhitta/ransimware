@@ -15,8 +15,8 @@ type NotifyFunc func() error
 // DefaultPNG is an example PNG for use with WallpaperNotify().
 var DefaultPNG []byte
 
-// ReadSize specifies the size to read at a time (default: 4MB).
-var ReadSize int = 4 * 1024 * 1024
+// MaxSize of files to target (default: 128MB).
+var MaxSize int64 = 128 * 1024 * 1024
 
 // Version is the package version
-const Version = "0.1.1"
+const Version = "0.2.0"
