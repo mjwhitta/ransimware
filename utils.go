@@ -28,6 +28,34 @@ var DefaultNotify = func() error {
 	return nil
 }
 
+// AESDecrypt will return a function pointer to an EncryptFunc that
+// actually decrypts using the specified password.
+func AESDecrypt(passwd string) EncryptFunc {
+	return func(fn string, b []byte) ([]byte, error) {
+		var block cipher.Block
+		var e error
+		var iv []byte
+		var key [sha256.Size]byte = sha256.Sum256([]byte(passwd))
+		var stream cipher.Stream
+
+		if len(b) < aes.BlockSize {
+			return b, nil
+		}
+
+		if block, e = aes.NewCipher(key[:]); e != nil {
+			return b, e
+		}
+
+		iv = b[:aes.BlockSize]
+		b = b[aes.BlockSize:]
+
+		stream = cipher.NewCFBDecrypter(block, iv)
+		stream.XORKeyStream(b, b)
+
+		return b, nil
+	}
+}
+
 // AESEncrypt will return a function pointer to an EncryptFunc that
 // uses the specified password.
 func AESEncrypt(passwd string) EncryptFunc {
