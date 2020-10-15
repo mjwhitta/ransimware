@@ -145,3 +145,4 @@ func main() {
 - Provide more helper functions
     - DNS exfil
     - FTP exfil
+    - RSA encryption
