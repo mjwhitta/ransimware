@@ -5,24 +5,35 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"flag"
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 var r *regexp.Regexp
 
 func init() {
+	flag.Parse()
 	r = regexp.MustCompile(`.{1,59}`)
 }
 
 func main() {
 	var b []byte
+	var bits int64 = 4096
 	var e error
 	var privkey *rsa.PrivateKey
 
-	if privkey, e = rsa.GenerateKey(rand.Reader, 4096); e != nil {
+	if flag.NArg() > 0 {
+		if bits, e = strconv.ParseInt(flag.Arg(0), 10, 64); e != nil {
+			panic(e)
+		}
+	}
+
+	privkey, e = rsa.GenerateKey(rand.Reader, int(bits))
+	if e != nil {
 		panic(e)
 	}
 
