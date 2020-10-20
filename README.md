@@ -143,5 +143,5 @@ func main() {
 ## TODO
 
 - Provide more helper functions
-    - DNS exfil
     - FTP exfil
+    - Websocket exfil

