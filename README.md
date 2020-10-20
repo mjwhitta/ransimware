@@ -144,4 +144,3 @@ func main() {
 
 - Provide more helper functions
     - FTP exfil
-    - Websocket exfil

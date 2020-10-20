@@ -1,3 +1,5 @@
+github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
+github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 gitlab.com/mjwhitta/cli v1.8.0 h1:o1u9B9tGOfakhqX3nVBAT7DLS1Ug95Cez9DGwwLrewE=
 gitlab.com/mjwhitta/cli v1.8.0/go.mod h1:0nzOLJZWsbgzJp/EQoLHcCLvKXX/iakyOZIqg94xAzo=
 gitlab.com/mjwhitta/hilighter v1.9.1 h1:YlUCB1jWYVtwwfQ4DFvwXULmvH3Bu9ELlTkS5+jzZgQ=
