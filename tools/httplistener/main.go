@@ -3,35 +3,23 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"strconv"
-	"strings"
-	"sync"
 
 	"gitlab.com/mjwhitta/log"
 )
 
-var m = &sync.Mutex{}
-
 func handler(w http.ResponseWriter, req *http.Request) {
-	var body []byte
+	var dump []byte
 	var e error
 
-	if body, e = ioutil.ReadAll(req.Body); e != nil {
+	if dump, e = httputil.DumpRequest(req, true); e != nil {
 		log.Err(e.Error())
 		return
 	}
 
-	m.Lock()
-	log.SubInfof("%s %s", req.Method, req.URL.String())
-	for k, v := range req.Header {
-		log.Warnf("%s: %s", k, strings.Join(v, "; "))
-	}
-	if len(body) > 0 {
-		log.Good(string(body))
-	}
-	m.Unlock()
+	log.Good(string(dump))
 
 	w.Write([]byte("Success"))
 }
