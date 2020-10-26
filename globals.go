@@ -19,4 +19,4 @@ var DefaultPNG []byte
 var MaxSize int64 = 128 * 1024 * 1024
 
 // Version is the package version
-const Version = "0.8.2"
+const Version = "0.8.3"

