@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"gitlab.com/mjwhitta/winhttp/http"
+	"gitlab.com/mjwhitta/win/winhttp/http"
 )
 
 // HTTPExfil will return a function pointer to an ExfilFunc that
