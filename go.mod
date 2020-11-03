@@ -9,6 +9,6 @@ require (
 	gitlab.com/mjwhitta/log v1.4.2
 	gitlab.com/mjwhitta/pathname v1.0.6
 	gitlab.com/mjwhitta/threadpool v1.2.0
-	gitlab.com/mjwhitta/win v0.1.0
-	golang.org/x/sys v0.0.0-20201027140754-0fcbb8f4928c
+	gitlab.com/mjwhitta/win v0.1.1
+	golang.org/x/sys v0.0.0-20201101102859-da207088b7d1
 )
