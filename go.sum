@@ -10,7 +10,7 @@ gitlab.com/mjwhitta/pathname v1.0.6 h1:hboITLPbJigX9WvKD6pv+Ay4w9zleOHnmJtGswBoY
 gitlab.com/mjwhitta/pathname v1.0.6/go.mod h1:DDc1eLhCHMHYMttam61vgyKGya/IIs2IDOTkr6GyFhs=
 gitlab.com/mjwhitta/threadpool v1.2.0 h1:J5xOxDx5X6C/4nSenAy/3tWdbyRpIOvoFQWF08rUTd8=
 gitlab.com/mjwhitta/threadpool v1.2.0/go.mod h1:2fSj7Psi52Ymza9kudtRo61wj2Uib2mYQTISY4iYG4Y=
-gitlab.com/mjwhitta/win v0.1.3 h1:mnR1halcpvqp65P+rskjKFKLeBzGYRpPD0HOPGqOS/s=
-gitlab.com/mjwhitta/win v0.1.3/go.mod h1:kl5ftCtjcnz9wFU4w3oavjX5zyii7DqOXb1lzYfw2GA=
-golang.org/x/sys v0.0.0-20201110211018-35f3e6cf4a65 h1:Qo9oJ566/Sq7N4hrGftVXs8GI2CXBCuOd4S2wHE/e0M=
-golang.org/x/sys v0.0.0-20201110211018-35f3e6cf4a65/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+gitlab.com/mjwhitta/win v0.1.4 h1:A0guYbEhmioKYw+8rktnWHcH25yM3EHnaK2ifnuLImk=
+gitlab.com/mjwhitta/win v0.1.4/go.mod h1:PNoN5vYFST4njFHgWgYh1hGr+M5m+LZlYqLoj/+HQ0Y=
+golang.org/x/sys v0.0.0-20201113233024-12cec1faf1ba h1:xmhUJGQGbxlod18iJGqVEp9cHIPLl7QiX2aA3to708s=
+golang.org/x/sys v0.0.0-20201113233024-12cec1faf1ba/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
