@@ -5,6 +5,7 @@ package ransimware
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
@@ -175,6 +176,8 @@ func ExecuteScript(
 	}
 
 	switch method {
+	case "b64powershell":
+		return executeShell("b64powershell", cmds)
 	case "bat":
 		return executeBat(cmds[0], cmds[1:], clean)
 	case "cmd", "shell":
@@ -191,12 +194,39 @@ func ExecuteScript(
 }
 
 func executeShell(shell string, cmds []string) (string, error) {
+	var b64 string
 	var e error
 	var flag string
 	var o []byte
 	var out []string
+	var tmp string
+	var utf8 []byte
+	var utf16 []uint16
 
 	switch shell {
+	case "b64powershell":
+		for _, cmd := range cmds {
+			tmp += strings.TrimSpace(cmd)
+
+			if !strings.HasSuffix(tmp, "{") &&
+				!strings.HasSuffix(tmp, ";") {
+				tmp += ";"
+			}
+		}
+
+		if utf16, e = windows.UTF16FromString(tmp); e != nil {
+			return "", e
+		}
+
+		utf8 = make([]byte, 2*len(utf16)-2)
+		for i, b16 := range utf16[:len(utf16)-1] {
+			binary.LittleEndian.PutUint16(utf8[2*i:2*(i+1)], b16)
+		}
+
+		b64 = base64.StdEncoding.EncodeToString(utf8)
+		cmds = []string{b64}
+		flag = "-e"
+		shell = "powershell"
 	case "cmd":
 		flag = "/C"
 	case "powershell":
