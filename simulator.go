@@ -9,25 +9,29 @@ import (
 	"regexp"
 
 	"gitlab.com/mjwhitta/pathname"
+	"gitlab.com/mjwhitta/safety"
 	tp "gitlab.com/mjwhitta/threadpool"
 )
 
 // Simulator is a struct containing all simulation metadata.
 type Simulator struct {
-	Encrypt  func(fn string, b []byte) ([]byte, error)
-	excludes []*regexp.Regexp
-	Exfil    func(fn string, b []byte) error
-	includes []*regexp.Regexp
-	Notify   func() error
-	OTP      [32]byte
-	paths    []string
-	Threads  int
+	count          *safety.Uint64
+	Encrypt        func(fn string, b []byte) ([]byte, error)
+	excludes       []*regexp.Regexp
+	Exfil          func(fn string, b []byte) error
+	ExfilThreshold uint64
+	includes       []*regexp.Regexp
+	Notify         func() error
+	OTP            [32]byte
+	paths          []string
+	Threads        int
 }
 
 // New will return a pointer to a new Simulator instance.
 func New(threads int) *Simulator {
 	var e error
 	var s = &Simulator{
+		count:   safety.NewUint64(),
 		Encrypt: DefaultEncrypt,
 		Exfil:   DefaultExfil,
 		Notify:  DefaultNotify,
@@ -76,6 +80,7 @@ func (s *Simulator) Include(pattern string) error {
 func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	var contents []byte
 	var e error
+	var exfil bool = true
 	var f *os.File
 	var path string = data["path"].(string)
 	var tmp []byte
@@ -106,9 +111,21 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 		tmp = contents
 	}
 
+	// This is not exact due to threading
+	if s.ExfilThreshold > 0 {
+		if s.count.Get() >= s.ExfilThreshold {
+			exfil = false
+		}
+
+		// Track exfiled data
+		s.count.Add(uint64(len(tmp)))
+	}
+
 	// Exfil
-	if e = s.Exfil(path, tmp); e != nil {
-		fmt.Println(e.Error())
+	if exfil {
+		if e = s.Exfil(path, tmp); e != nil {
+			fmt.Println(e.Error())
+		}
 	}
 }
 

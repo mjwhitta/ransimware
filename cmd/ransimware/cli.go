@@ -12,12 +12,13 @@ import (
 
 // Flags
 type cliFlags struct {
-	encrypt bool
-	exfil   bool
-	nocolor bool
-	threads int
-	verbose bool
-	version bool
+	encrypt   bool
+	exfil     bool
+	nocolor   bool
+	threads   int
+	threshold uint64
+	verbose   bool
+	version   bool
 }
 
 var flags cliFlags
@@ -77,14 +78,20 @@ func init() {
 		"t",
 		"threads",
 		32,
-		"Use the specified thread-pool size for reading files.",
+		"Use specified thread-pool size for reading files.",
+	)
+	cli.Flag(
+		&flags.threshold,
+		"threshold",
+		0,
+		"Stop exfil after specified bytes has been exceeded.",
 	)
 	cli.Flag(
 		&flags.verbose,
 		"v",
 		"verbose",
 		false,
-		"Show show stacktrace if error.",
+		"Show show stacktrace, if error.",
 	)
 	cli.Flag(&flags.version, "V", "version", false, "Show version.")
 	cli.Parse()
