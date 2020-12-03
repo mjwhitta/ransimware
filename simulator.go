@@ -83,6 +83,7 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	var exfil bool = true
 	var f *os.File
 	var path string = data["path"].(string)
+	var size uint64
 	var tmp []byte
 
 	if f, e = os.Open(path); e != nil {
@@ -111,14 +112,13 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 		tmp = contents
 	}
 
-	// This is not exact due to threading
+	// Stop data exfil if threshold is achieved
 	if s.ExfilThreshold > 0 {
-		if s.count.Get() >= s.ExfilThreshold {
+		size = uint64(len(tmp))
+
+		if !s.count.LessEqualAdd(s.ExfilThreshold-size, size) {
 			exfil = false
 		}
-
-		// Track exfiled data
-		s.count.Add(uint64(len(tmp)))
 	}
 
 	// Exfil
