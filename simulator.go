@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"gitlab.com/mjwhitta/pathname"
 	"gitlab.com/mjwhitta/safety"
@@ -21,21 +22,26 @@ type Simulator struct {
 	Exfil          func(fn string, b []byte) error
 	ExfilThreshold uint64
 	includes       []*regexp.Regexp
+	last           []time.Time
+	MaxFileSize    int64
 	Notify         func() error
 	OTP            [32]byte
 	paths          []string
 	Threads        int
+	WaitEvery      time.Duration
+	WaitFor        time.Duration
 }
 
 // New will return a pointer to a new Simulator instance.
 func New(threads int) *Simulator {
 	var e error
 	var s = &Simulator{
-		count:   safety.NewUint64(),
-		Encrypt: DefaultEncrypt,
-		Exfil:   DefaultExfil,
-		Notify:  DefaultNotify,
-		Threads: threads,
+		count:       safety.NewUint64(),
+		Encrypt:     DefaultEncrypt,
+		Exfil:       DefaultExfil,
+		MaxFileSize: 128 * 1024 * 1024,
+		Notify:      DefaultNotify,
+		Threads:     threads,
 	}
 
 	if _, e = rand.Read(s.OTP[:]); e != nil {
@@ -85,6 +91,9 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	var path string = data["path"].(string)
 	var size uint64
 	var tmp []byte
+
+	// Check if delay is needed
+	s.last[tid] = wait(s.last[tid], s.WaitEvery, s.WaitFor)
 
 	if f, e = os.Open(path); e != nil {
 		fmt.Println(e.Error())
@@ -144,6 +153,7 @@ func (s *Simulator) Target(path string) error {
 func (s *Simulator) Run() error {
 	var e error
 	var include bool
+	var last time.Time = time.Now()
 	var pool *tp.ThreadPool
 
 	// Initialize ThreadPool
@@ -152,24 +162,35 @@ func (s *Simulator) Run() error {
 	}
 	defer pool.Close()
 
+	// Initialize array of intermittent delays
+	s.last = make([]time.Time, s.Threads+1)
+	for i := range s.last {
+		s.last[i] = last
+	}
+
 	// Walk paths
 	for _, root := range s.paths {
 		e = filepath.Walk(
 			root,
 			func(path string, info os.FileInfo, e error) error {
+				// Check if delay is needed
+				s.last[0] = wait(s.last[0], s.WaitEvery, s.WaitFor)
+
 				if e != nil {
 					// Ignore errors as we want to traverse everything
 					// we possibly can
 					return nil
 				}
 
-				// Ignore directories
+				// Ignore directories and symlinks
 				if info.IsDir() {
+					return nil
+				} else if (info.Mode() & os.ModeSymlink) > 0 {
 					return nil
 				}
 
-				// Ignore files larger than MaxSize
-				if info.Size() > MaxSize {
+				// Ignore files larger than MaxFileSize
+				if info.Size() > s.MaxFileSize {
 					return nil
 				}
 

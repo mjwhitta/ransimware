@@ -16,6 +16,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	ws "github.com/gorilla/websocket"
 )
@@ -310,6 +311,15 @@ func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
 
 		return final, nil
 	}
+}
+
+func wait(t time.Time, waitEvery, waitFor time.Duration) time.Time {
+	if (waitEvery > 0) && (time.Since(t) > waitEvery) {
+		time.Sleep(waitFor)
+		return time.Now()
+	}
+
+	return t
 }
 
 // WebsocketExfil will return a function pointer to an ExfilFunc that

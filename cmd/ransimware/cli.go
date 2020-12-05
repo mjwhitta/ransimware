@@ -19,6 +19,8 @@ type cliFlags struct {
 	threshold uint64
 	verbose   bool
 	version   bool
+	waitEvery uint
+	waitFor   uint
 }
 
 var flags cliFlags
@@ -92,6 +94,18 @@ func init() {
 		"verbose",
 		false,
 		"Show show stacktrace, if error.",
+	)
+	cli.Flag(
+		&flags.waitEvery,
+		"wait-every",
+		0,
+		"Wait after the specified number of seconds, repeatedly.",
+	)
+	cli.Flag(
+		&flags.waitFor,
+		"wait-for",
+		0,
+		"Wait for the specified number of seconds.",
 	)
 	cli.Flag(&flags.version, "V", "version", false, "Show version.")
 	cli.Parse()

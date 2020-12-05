@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"gitlab.com/mjwhitta/cli"
 	"gitlab.com/mjwhitta/log"
@@ -47,9 +48,14 @@ func main() {
 
 	// Create simulator
 	sim = rw.New(flags.threads)
+	sim.WaitEvery = time.Duration(flags.waitEvery) * time.Second
+	sim.WaitFor = time.Duration(flags.waitFor) * time.Second
 
 	if flags.encrypt {
-		sim.Encrypt = rw.AESEncrypt("password")
+		sim.Encrypt = func(fn string, b []byte) ([]byte, error) {
+			println(fn)
+			return rw.AESEncrypt("password")(fn, b)
+		}
 	}
 
 	if flags.exfil {
