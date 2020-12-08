@@ -163,7 +163,12 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 }
 
 // WallpaperNotify is a NotifyFunc that sets the background wallpaper.
-func WallpaperNotify(image string, png []byte) NotifyFunc {
+func WallpaperNotify(
+	img string,
+	png []byte,
+	fit string,
+	clean bool,
+) NotifyFunc {
 	return func() error {
 		return fmt.Errorf("OS not supported")
 	}

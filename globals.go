@@ -1,5 +1,15 @@
 package ransimware
 
+// Desktop wallpaper style consts
+const (
+	DesktopCenter  string = "0"
+	DesktopFill    string = "10"
+	DesktopFit     string = "6"
+	DesktopSpan    string = "22"
+	DesktopStretch string = "2"
+	DesktopTile    string = "0"
+)
+
 // EncryptFunc defines a function pointer that can be used to encrypt
 // file contents before exfil.
 type EncryptFunc func(fn string, b []byte) ([]byte, error)
@@ -16,4 +26,4 @@ type NotifyFunc func() error
 var DefaultPNG []byte
 
 // Version is the package version
-const Version = "0.12.0"
+const Version = "0.13.0"

