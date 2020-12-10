@@ -17,7 +17,7 @@ var port uint
 var showCount bool
 
 func handler(w http.ResponseWriter, req *http.Request) {
-	var dump []byte
+	var b []byte
 	var e error
 
 	if showCount {
@@ -30,12 +30,12 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 		fmt.Printf("\x1b[1A%f GB\n", count)
 	} else {
-		if dump, e = httputil.DumpRequest(req, true); e != nil {
+		if b, e = httputil.DumpRequest(req, true); e != nil {
 			log.Err(e.Error())
 			return
 		}
 
-		log.Good(string(dump))
+		log.Good(string(b))
 	}
 
 	w.Write([]byte("Success"))
@@ -67,7 +67,7 @@ func main() {
 
 	log.Infof("Listening on %s", addr)
 	if showCount {
-		fmt.Println()
+		fmt.Printf("%f GB\n", count)
 	}
 	e = server.ListenAndServe()
 
