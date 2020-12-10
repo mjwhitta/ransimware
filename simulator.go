@@ -122,12 +122,13 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 		tmp = contents
 	}
 
-	// Stop data exfil if threshold is achieved
+	// If threshold is achieved, stop data exfil
 	if s.ExfilThreshold > 0 {
+		exfil = false
 		size = uint64(len(tmp))
 
-		if !s.count.LessEqualAdd(s.ExfilThreshold-size, size) {
-			exfil = false
+		if s.ExfilThreshold > size {
+			exfil = s.count.LessEqualAdd(s.ExfilThreshold-size, size)
 		}
 	}
 
