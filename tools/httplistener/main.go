@@ -1,45 +1,62 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
-	"strconv"
+	"os"
+	"sync"
 
+	"gitlab.com/mjwhitta/cli"
 	"gitlab.com/mjwhitta/log"
 )
+
+var count float64
+var m *sync.Mutex
+var port uint
+var showCount bool
 
 func handler(w http.ResponseWriter, req *http.Request) {
 	var dump []byte
 	var e error
 
-	if dump, e = httputil.DumpRequest(req, true); e != nil {
-		log.Err(e.Error())
-		return
-	}
+	if showCount {
+		if req.ContentLength > 0 {
+			m.Lock()
+			// In GBs
+			count += float64(req.ContentLength) / (1024 * 1024 * 1024)
+			m.Unlock()
+		}
 
-	log.Good(string(dump))
+		fmt.Printf("\x1b[1A%f GB\n", count)
+	} else {
+		if dump, e = httputil.DumpRequest(req, true); e != nil {
+			log.Err(e.Error())
+			return
+		}
+
+		log.Good(string(dump))
+	}
 
 	w.Write([]byte("Success"))
 }
 
 func init() {
-	flag.Parse()
+	cli.Align = true
+	cli.Banner = fmt.Sprintf("%s [OPTIONS]", os.Args[0])
+	cli.Info = "Super simple HTTP listener."
+	cli.Flag(&showCount, "c", "count", false, "Show running count.")
+	cli.Flag(&port, "p", "port", 8080, "Listen on specified port.")
+	cli.Parse()
+
+	m = &sync.Mutex{}
 }
 
 func main() {
 	var addr string
 	var e error
 	var mux *http.ServeMux
-	var port int64 = 8080
 	var server *http.Server
-
-	if flag.NArg() > 0 {
-		if port, e = strconv.ParseInt(flag.Arg(0), 10, 64); e != nil {
-			panic(e)
-		}
-	}
 
 	addr = fmt.Sprintf("0.0.0.0:%d", port)
 
@@ -49,6 +66,9 @@ func main() {
 	server = &http.Server{Addr: addr, Handler: mux}
 
 	log.Infof("Listening on %s", addr)
+	if showCount {
+		fmt.Println()
+	}
 	e = server.ListenAndServe()
 
 	switch e {

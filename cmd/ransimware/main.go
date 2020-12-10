@@ -59,6 +59,7 @@ func main() {
 	}
 
 	if flags.exfil {
+		sim.ExfilFilenames = true
 		sim.ExfilThreshold = flags.threshold
 		sim.Exfil = rw.HTTPExfil(
 			"http://localhost:8080",

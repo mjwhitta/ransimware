@@ -20,6 +20,7 @@ type Simulator struct {
 	Encrypt        func(fn string, b []byte) ([]byte, error)
 	excludes       []*regexp.Regexp
 	Exfil          func(fn string, b []byte) error
+	ExfilFilenames bool
 	ExfilThreshold uint64
 	includes       []*regexp.Regexp
 	last           []time.Time
@@ -132,6 +133,10 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 
 	// Exfil
 	if exfil {
+		if !s.ExfilFilenames {
+			path = ""
+		}
+
 		if e = s.Exfil(path, tmp); e != nil {
 			fmt.Println(e.Error())
 		}
