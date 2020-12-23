@@ -12,7 +12,7 @@ gitlab.com/mjwhitta/safety v1.7.0 h1:0Kk0rcb3l22H01lThMPbOF0x1qNNpwjY3tNRoVU4VYY
 gitlab.com/mjwhitta/safety v1.7.0/go.mod h1:TXHylQtFRnA/cxjtPjiConVT29/288rm1eQRGOqzckM=
 gitlab.com/mjwhitta/threadpool v1.2.0 h1:J5xOxDx5X6C/4nSenAy/3tWdbyRpIOvoFQWF08rUTd8=
 gitlab.com/mjwhitta/threadpool v1.2.0/go.mod h1:2fSj7Psi52Ymza9kudtRo61wj2Uib2mYQTISY4iYG4Y=
-gitlab.com/mjwhitta/win v0.2.0 h1:vIjT4WgYJX5qaju3kc+ndF/kO4DezYahaZDg4PnTMHQ=
-gitlab.com/mjwhitta/win v0.2.0/go.mod h1:pGyfOI0IQb+E9JNXzQ3VDJ9E5dRABRmktglr8HG4IPQ=
+gitlab.com/mjwhitta/win v0.3.0 h1:mBKyLdhNtzulF9+IOFO9yjd2k2TmIyWlcMqxMb8899U=
+gitlab.com/mjwhitta/win v0.3.0/go.mod h1:pGyfOI0IQb+E9JNXzQ3VDJ9E5dRABRmktglr8HG4IPQ=
 golang.org/x/sys v0.0.0-20201218084310-7d0127a74742 h1:+CBz4km/0KPU3RGTwARGh/noP3bEwtHcq+0YcBQM2JQ=
 golang.org/x/sys v0.0.0-20201218084310-7d0127a74742/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

