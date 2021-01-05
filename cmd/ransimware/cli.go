@@ -13,7 +13,7 @@ import (
 // Flags
 type cliFlags struct {
 	encrypt   bool
-	exfil     bool
+	exfil     string
 	nocolor   bool
 	threads   int
 	threshold uint64
@@ -66,8 +66,8 @@ func init() {
 		&flags.exfil,
 		"x",
 		"exfil",
-		false,
-		"Exfil simulated data to http://localhost:8080.",
+		"",
+		"Exfil simulated data to specified location.",
 	)
 	cli.Flag(
 		&flags.nocolor,

