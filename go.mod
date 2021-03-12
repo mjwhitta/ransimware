@@ -11,6 +11,6 @@ require (
 	gitlab.com/mjwhitta/pathname v1.0.8
 	gitlab.com/mjwhitta/safety v1.7.0
 	gitlab.com/mjwhitta/threadpool v1.2.0
-	gitlab.com/mjwhitta/win v0.4.0
-	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78
+	gitlab.com/mjwhitta/win v0.4.1
+	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
 )
