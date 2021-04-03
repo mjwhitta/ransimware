@@ -35,25 +35,22 @@ usage() {
     cat <<EOF
 Usage: ${0##*/} [OPTIONS]
 
-Simple FTP listener via Docker.
+DESCRIPTION
+    Simple FTP listener via Docker.
 
-Options:
+OPTIONS
     -c, --cert=PEM    Use specified TLS cert
     -h, --help        Display this help message
     -k, --key=PEM     Use specified TLS key
-    --no-color        Disable colorized output
+        --no-color    Disable colorized output
 
 EOF
     exit "$1"
 }
 
-declare -a args deps
+declare -a args
 unset help
 color="true"
-deps+=("docker")
-
-# Check for missing dependencies
-check_deps
 
 # Parse command line options
 while [[ $# -gt 0 ]]; do
@@ -74,8 +71,15 @@ while [[ $# -gt 0 ]]; do
 done
 [[ ${#args[@]} -eq 0 ]] || set -- "${args[@]}"
 
-# Check for valid params
+# Help info
 [[ -z $help ]] || usage 0
+
+# Check for missing dependencies
+declare -a deps
+deps+=("docker")
+check_deps
+
+# Check for valid params
 [[ $# -eq 0 ]] || usage 1
 [[ -z $cert ]] || [[ -f "$cert" ]] || errx 2 "$cert does not exist"
 [[ -z $key ]] || [[ -f "$key" ]] || errx 3 "$key does not exist"
