@@ -13,7 +13,8 @@ This Go module allows you to simulate ransomware.
 Open a terminal and run the following:
 
 ```
-$ go get -u gitlab.com/mjwhitta/ransimware
+$ go get --ldflags="-s -w" --trimpath -u \
+    gitlab.com/mjwhitta/ransimware
 ```
 
 ## Usage
