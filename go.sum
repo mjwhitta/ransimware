@@ -21,10 +21,10 @@ gitlab.com/mjwhitta/safety v1.7.1 h1:Gm/P60SUSkuvYNV1hy83GCJDTBlZLsEUMDF6fFD/7KE
 gitlab.com/mjwhitta/safety v1.7.1/go.mod h1:wVWKeBfk2rr32ErLuSTu5+U5sgvfsmgSdw7WmrrQkqU=
 gitlab.com/mjwhitta/threadpool v1.2.1 h1:96LS3iKMZasm1PuUTGAzDVrzF00X9sZ7BLpr+qkML6M=
 gitlab.com/mjwhitta/threadpool v1.2.1/go.mod h1:ExFjl88f6Hd2m/ujzLAyBWM8U29Z88+axepZo/yLqeQ=
-gitlab.com/mjwhitta/win v0.6.2 h1:JEaIcCOEUSkiPQYAv0XXC3kkyhU1HT4I02BMgYpuZaI=
-gitlab.com/mjwhitta/win v0.6.2/go.mod h1:+W1uOtRuz9V5JNS9dKgAIjZIFbvzKbAbOpZ4NpcO2v8=
-golang.org/x/sys v0.0.0-20210817190340-bfb29a6856f2 h1:c8PlLMqBbOHoqtjteWm5/kbe6rNY2pbRfbIMVnepueo=
-golang.org/x/sys v0.0.0-20210817190340-bfb29a6856f2/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+gitlab.com/mjwhitta/win v0.7.0 h1:hMnn5tka7ndDFV6lEzx/VjrSWE75sPAXuAYwcwgkUak=
+gitlab.com/mjwhitta/win v0.7.0/go.mod h1:U/ZOHuy1kDLb8JULUynmEBvPXISdRzCWdL8zJXJlp2g=
+golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34 h1:GkvMjFtXUmahfDtashnc1mnrCtuBVcwse5QV2lUk/tI=
+golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie2QXMNeKRTHCNY2nXvo=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=

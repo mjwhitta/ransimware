@@ -3,6 +3,7 @@ package ransimware
 import (
 	"crypto/rand"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -182,9 +183,11 @@ func (s *Simulator) Run() error {
 
 	// Walk paths
 	for _, root := range s.paths {
-		e = filepath.Walk(
+		e = filepath.WalkDir(
 			root,
-			func(path string, info os.FileInfo, e error) error {
+			func(path string, d fs.DirEntry, e error) error {
+				var info fs.FileInfo
+
 				// Check if delay is needed
 				s.last[0] = wait(s.last[0], s.WaitEvery, s.WaitFor)
 
@@ -195,8 +198,12 @@ func (s *Simulator) Run() error {
 				}
 
 				// Ignore directories and symlinks
-				if info.IsDir() {
+				if d.IsDir() {
 					return nil
+				}
+
+				if info, e = d.Info(); e != nil {
+					return e
 				} else if (info.Mode() & os.ModeSymlink) > 0 {
 					return nil
 				}

