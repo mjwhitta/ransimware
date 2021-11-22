@@ -26,4 +26,4 @@ type NotifyFunc func() error
 var DefaultPNG []byte
 
 // Version is the package version
-const Version = "0.17.4"
+const Version = "0.17.5"
