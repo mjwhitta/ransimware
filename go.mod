@@ -9,7 +9,7 @@ require (
 	gitlab.com/mjwhitta/hilighter v1.9.2
 	gitlab.com/mjwhitta/log v1.4.4
 	gitlab.com/mjwhitta/pathname v1.0.9
-	gitlab.com/mjwhitta/safety v1.10.0
+	gitlab.com/mjwhitta/safety v1.11.0
 	gitlab.com/mjwhitta/threadpool v1.2.1
 	gitlab.com/mjwhitta/win v0.7.2
 	golang.org/x/sys v0.0.0-20211117180635-dee7805ff2e1
