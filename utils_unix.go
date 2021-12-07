@@ -7,13 +7,14 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	hl "gitlab.com/mjwhitta/hilighter"
 )
 
 // ExecuteScript will run shell commands using the provided method, as
@@ -63,7 +64,7 @@ func ExecuteScript(
 	case "zsh":
 		return executeShell("zsh", cmds)
 	default:
-		return "", fmt.Errorf("Unsupported method")
+		return "", hl.Errorf("ransimware: unsupported method")
 	}
 }
 
@@ -176,7 +177,7 @@ func WallpaperNotify(
 	clean bool,
 ) NotifyFunc {
 	return func() error {
-		return fmt.Errorf("OS not supported")
+		return hl.Errorf("ransimware: unsupported OS")
 	}
 }
 

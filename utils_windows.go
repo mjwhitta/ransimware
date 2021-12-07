@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -19,6 +18,7 @@ import (
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
+	hl "gitlab.com/mjwhitta/hilighter"
 	"gitlab.com/mjwhitta/win/wininet/http"
 )
 
@@ -196,7 +196,7 @@ func ExecuteScript(
 	case "registry":
 		return executeRegistry(cmds, clean)
 	default:
-		return "", fmt.Errorf("Unsupported method")
+		return "", hl.Errorf("ransimware: unsupported method")
 	}
 }
 
@@ -239,7 +239,8 @@ func executeShell(shell string, cmds []string) (string, error) {
 	case "powershell":
 		flag = "-c"
 	default:
-		return "", fmt.Errorf("Unsupported shell: %s", shell)
+		e = hl.Errorf("ransimware: unsupported shell: %s", shell)
+		return "", e
 	}
 
 	// Run cmds

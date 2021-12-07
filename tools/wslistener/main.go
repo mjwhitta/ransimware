@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"sync"
 
 	ws "github.com/gorilla/websocket"
 	"gitlab.com/mjwhitta/cli"
+	hl "gitlab.com/mjwhitta/hilighter"
 	"gitlab.com/mjwhitta/log"
 )
 
@@ -19,7 +19,7 @@ var showCount bool
 
 func init() {
 	cli.Align = true
-	cli.Banner = fmt.Sprintf("%s [OPTIONS]", os.Args[0])
+	cli.Banner = hl.Sprintf("%s [OPTIONS]", os.Args[0])
 	cli.Info = "Super simple Websocket listener."
 	cli.Flag(&showCount, "c", "count", false, "Show running count.")
 	cli.Flag(&port, "p", "port", 8080, "Listen on specified port.")
@@ -34,7 +34,7 @@ func main() {
 	var mux *http.ServeMux
 	var server *http.Server
 
-	addr = fmt.Sprintf("0.0.0.0:%d", port)
+	addr = hl.Sprintf("0.0.0.0:%d", port)
 
 	mux = http.NewServeMux()
 	mux.HandleFunc("/", wsHandler)
@@ -43,7 +43,7 @@ func main() {
 
 	log.Infof("Listening on %s", addr)
 	if showCount {
-		fmt.Printf("%f GB\n", count)
+		hl.Printf("%f GB\n", count)
 	}
 	e = server.ListenAndServe()
 
@@ -82,7 +82,7 @@ func wsHandler(w http.ResponseWriter, req *http.Request) {
 				m.Unlock()
 			}
 
-			fmt.Printf("\x1b[1A%f GB\n", count)
+			hl.Printf("\x1b[1A%f GB\n", count)
 		} else {
 			log.Good(string(b))
 		}

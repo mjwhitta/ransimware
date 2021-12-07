@@ -11,7 +11,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"net"
 	"os"
@@ -22,6 +21,7 @@ import (
 
 	ws "github.com/gorilla/websocket"
 	"github.com/mjwhitta/ftp"
+	hl "gitlab.com/mjwhitta/hilighter"
 )
 
 // DefaultEncrypt is the default encryption behavior.
@@ -50,7 +50,7 @@ func AESDecrypt(passwd string) EncryptFunc {
 		var stream cipher.Stream
 
 		if len(b) < aes.BlockSize {
-			return b, fmt.Errorf("Ciphertext too short")
+			return b, hl.Errorf("ransimware: ciphertext too short")
 		}
 
 		if block, e = aes.NewCipher(key[:]); e != nil {
