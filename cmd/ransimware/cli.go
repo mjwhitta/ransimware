@@ -10,8 +10,19 @@ import (
 	rw "gitlab.com/mjwhitta/ransimware"
 )
 
+// Exit status
+const (
+	Good = iota
+	InvalidOption
+	MissingOption
+	InvalidArgument
+	MissingArgument
+	ExtraArgument
+	Exception
+)
+
 // Flags
-type cliFlags struct {
+var flags struct {
 	encrypt   bool
 	exfil     string
 	nocolor   bool
@@ -22,8 +33,6 @@ type cliFlags struct {
 	waitEvery uint
 	waitFor   uint
 }
-
-var flags cliFlags
 
 func init() {
 	// Configure cli package
@@ -39,19 +48,15 @@ func init() {
 			"Normally the exit status is 0. In the event of an error",
 			"the exit status will be one of the below:\n\n",
 			hl.Sprintf("%d: Invalid option\n", InvalidOption),
+			hl.Sprintf("%d: Missing option\n", MissingOption),
 			hl.Sprintf("%d: Invalid argument\n", InvalidArgument),
-			hl.Sprintf("%d: Missing arguments\n", MissingArguments),
-			hl.Sprintf("%d: Extra arguments\n", ExtraArguments),
+			hl.Sprintf("%d: Missing argument\n", MissingArgument),
+			hl.Sprintf("%d: Extra argument\n", ExtraArgument),
 			hl.Sprintf("%d: Exception", Exception),
 		},
 		" ",
 	)
-	cli.Info = strings.Join(
-		[]string{
-			"Simulate common ransomware behavior and techniques.",
-		},
-		" ",
-	)
+	cli.Info = "Simulate common ransomware behavior and techniques."
 	cli.Title = "Ransimware"
 
 	// Parse cli flags
@@ -93,7 +98,7 @@ func init() {
 		"v",
 		"verbose",
 		false,
-		"Show show stacktrace, if error.",
+		"Show stacktrace, if error.",
 	)
 	cli.Flag(
 		&flags.waitEvery,

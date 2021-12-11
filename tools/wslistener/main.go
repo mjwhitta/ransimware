@@ -75,10 +75,10 @@ func wsHandler(w http.ResponseWriter, req *http.Request) {
 		}
 
 		if showCount {
-			if req.ContentLength > 0 {
+			if len(b) > 0 {
 				m.Lock()
 				// In GBs
-				count += float64(req.ContentLength) / bytesPerG
+				count += float64(len(b)) / bytesPerG
 				m.Unlock()
 			}
 

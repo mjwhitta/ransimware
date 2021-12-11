@@ -9,7 +9,8 @@ import (
 	"regexp"
 	"time"
 
-	hl "gitlab.com/mjwhitta/hilighter"
+	"gitlab.com/mjwhitta/errors"
+	"gitlab.com/mjwhitta/log"
 	"gitlab.com/mjwhitta/pathname"
 	"gitlab.com/mjwhitta/safety"
 	tp "gitlab.com/mjwhitta/threadpool"
@@ -64,7 +65,7 @@ func (s *Simulator) Exclude(pattern string) error {
 
 	// Ensure valid regex
 	if r, e = regexp.Compile(pattern); e != nil {
-		return e
+		return errors.Newf("invalid regex %s: %w", pattern, e)
 	}
 
 	s.excludes = append(s.excludes, r)
@@ -78,7 +79,7 @@ func (s *Simulator) Include(pattern string) error {
 
 	// Ensure valid regex
 	if r, e = regexp.Compile(pattern); e != nil {
-		return e
+		return errors.Newf("invalid regex %s: %w", pattern, e)
 	}
 
 	s.includes = append(s.includes, r)
@@ -98,14 +99,16 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	s.last[tid] = wait(s.last[tid], s.WaitEvery, s.WaitFor)
 
 	if f, e = os.Open(path); e != nil {
-		hl.Println(e.Error())
+		e = errors.Newf("failed to open %s: %w", path, e)
+		log.Err(e.Error())
 		return
 	}
 	defer f.Close()
 
 	// Read file
 	if contents, e = ioutil.ReadAll(f); e != nil {
-		hl.Println(e.Error())
+		e = errors.Newf("failed to read %s: %w", path, e)
+		log.Err(e.Error())
 		return
 	}
 
@@ -119,7 +122,8 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 
 	// Encrypt contents
 	if tmp, e = s.Encrypt(path, contents); e != nil {
-		hl.Println(e.Error())
+		e = errors.Newf("Encrypt returned error: %w", e)
+		log.Err(e.Error())
 		tmp = contents
 	}
 
@@ -140,7 +144,8 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 		}
 
 		if e = s.Exfil(path, tmp); e != nil {
-			hl.Println(e.Error())
+			e = errors.Newf("Exfil returned error: %w", e)
+			log.Err(e.Error())
 		}
 	}
 }
@@ -151,11 +156,15 @@ func (s *Simulator) Target(path string) error {
 
 	// Ensure path exists
 	if !pathname.DoesExist(path) {
-		return hl.Errorf("ransimware: path %s does not exist", path)
+		return errors.Newf("target %s not found", path)
 	}
 
 	if path, e = filepath.Abs(path); e != nil {
-		return e
+		return errors.Newf(
+			"failed to get absolute path for %s: %w",
+			path,
+			e,
+		)
 	}
 
 	s.paths = append(s.paths, path)
@@ -171,7 +180,7 @@ func (s *Simulator) Run() error {
 
 	// Initialize ThreadPool
 	if pool, e = tp.New(s.Threads); e != nil {
-		return e
+		return errors.Newf("failed to initialize thread pool: %w", e)
 	}
 	defer pool.Close()
 
@@ -203,6 +212,7 @@ func (s *Simulator) Run() error {
 				}
 
 				if info, e = d.Info(); e != nil {
+					e = errors.Newf("failed to get file info: %w", e)
 					return e
 				} else if (info.Mode() & os.ModeSymlink) > 0 {
 					return nil
@@ -239,7 +249,7 @@ func (s *Simulator) Run() error {
 			},
 		)
 		if e != nil {
-			hl.Println(e.Error())
+			log.Err(e.Error())
 		}
 	}
 

