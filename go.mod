@@ -12,7 +12,7 @@ require (
 	gitlab.com/mjwhitta/pathname v1.0.9
 	gitlab.com/mjwhitta/safety v1.11.0
 	gitlab.com/mjwhitta/threadpool v1.4.0
-	gitlab.com/mjwhitta/win v0.9.0
+	gitlab.com/mjwhitta/win v0.10.0
 	golang.org/x/sys v0.0.0-20211210111614-af8b64212486
 )
 
