@@ -1,7 +1,10 @@
 *.profile
 *.test
+.tags
 build
-cmd/*
-!cmd/ransimware
+cover.out
 local
 tags
+
+cmd/*
+!cmd/ransimware
