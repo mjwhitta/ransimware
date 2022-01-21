@@ -157,7 +157,7 @@ func (s *Simulator) Target(path string) error {
 
 	// Ensure path exists
 	if ok, e = pathname.DoesExist(path); e != nil {
-		return errors.Newf("target %s not accessible", path)
+		return errors.Newf("target %s not accessible: %w", path, e)
 	} else if !ok {
 		return errors.Newf("target %s not found", path)
 	}
