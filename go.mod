@@ -13,10 +13,7 @@ require (
 	gitlab.com/mjwhitta/safety v1.11.0
 	gitlab.com/mjwhitta/threadpool v1.4.0
 	gitlab.com/mjwhitta/win v0.10.3
-	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
+	golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c
 )
 
-require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-)
+require github.com/stretchr/testify v1.7.4 // indirect
