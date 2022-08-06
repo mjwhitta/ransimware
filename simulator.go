@@ -2,8 +2,8 @@ package ransimware
 
 import (
 	"crypto/rand"
+	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -106,7 +106,7 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	defer f.Close()
 
 	// Read file
-	if contents, e = ioutil.ReadAll(f); e != nil {
+	if contents, e = io.ReadAll(f); e != nil {
 		e = errors.Newf("failed to read %s: %w", path, e)
 		log.Err(e.Error())
 		return
