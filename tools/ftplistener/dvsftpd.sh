@@ -39,10 +39,11 @@ DESCRIPTION
     Simple FTP listener via Docker.
 
 OPTIONS
-    -c, --cert=PEM    Use specified TLS cert
-    -h, --help        Display this help message
-    -k, --key=PEM     Use specified TLS key
-        --no-color    Disable colorized output
+    -c, --cert=PEM     Use specified TLS cert
+    -h, --help         Display this help message
+    -k, --key=PEM      Use specified TLS key
+        --no-color     Disable colorized output
+    -p, --port=PORT    Use the specified port (default: 21)
 
 EOF
     exit "$1"
@@ -51,6 +52,7 @@ EOF
 declare -a args
 unset help
 color="true"
+port="21"
 
 # Parse command line options
 while [[ $# -gt 0 ]]; do
@@ -60,6 +62,7 @@ while [[ $# -gt 0 ]]; do
         "-h"|"--help") help="true" ;;
         "-k"|"--key"*) key="$(long_opt "$@")" ;;
         "--no-color") unset color ;;
+        "-p"|"--port"*) port="$(long_opt "$@")" ;;
         *) args+=("$1") ;;
     esac
     case "$?" in
@@ -88,13 +91,19 @@ conf="vsftpd.conf"
 [[ -z $cert ]] || [[ -z $key ]] || conf="vsftpd_ssl.conf"
 
 mkdir -p ftp
-chmod 777 ftp
+chmod 770 ftp
+
+docker rm -f vsftpd 2>/dev/null
+trap "docker rm -f vsftpd 2>/dev/null" SIGINT
 
 docker run \
-    -e FTP_PASSWORD="ftptest" \
-    -e FTP_USER="ftptest" \
-    -i --network="host" --rm -t \
+    -d -e FTP_PASSWORD="ftptest" -e FTP_USER="ftptest" \
+    -i --name vsftpd -p "$port:21" -p "4559-4564:4559-4564" --rm -t \
     ${cert:+-v "$(pwd)/$cert":/etc/ssl/certs/vsftpd.crt:ro} \
     ${key:+-v "$(pwd)/$key":/etc/ssl/private/vsftpd.key:ro} \
-    -v "$(pwd)/ftp":/srv \
-    panubo/vsftpd vsftpd "/etc/$conf"
+    -v "$(pwd)/ftp":/srv panubo/vsftpd vsftpd "/etc/$conf"
+
+docker exec -it vsftpd groupmod -g "$(id -g)" ftp
+docker exec -it vsftpd usermod -u "$(id -u)" ftp
+
+docker logs -f vsftpd
