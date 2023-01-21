@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	ws "github.com/gorilla/websocket"
-	"gitlab.com/mjwhitta/cli"
-	hl "gitlab.com/mjwhitta/hilighter"
-	"gitlab.com/mjwhitta/log"
+	"github.com/mjwhitta/cli"
+	hl "github.com/mjwhitta/hilighter"
+	"github.com/mjwhitta/log"
 )
 
 var bytesPerG float64 = 1024 * 1024 * 1024

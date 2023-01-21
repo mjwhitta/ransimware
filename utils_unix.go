@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/mjwhitta/errors"
+	"github.com/mjwhitta/errors"
 )
 
 // ExecuteScript will run shell commands using the provided method, as

@@ -4,10 +4,10 @@ import (
 	"os"
 	"strings"
 
-	"gitlab.com/mjwhitta/cli"
-	hl "gitlab.com/mjwhitta/hilighter"
-	"gitlab.com/mjwhitta/log"
-	rw "gitlab.com/mjwhitta/ransimware"
+	"github.com/mjwhitta/cli"
+	hl "github.com/mjwhitta/hilighter"
+	"github.com/mjwhitta/log"
+	rw "github.com/mjwhitta/ransimware"
 )
 
 // Exit status

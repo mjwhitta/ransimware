@@ -6,9 +6,9 @@ import (
 	"os"
 	"sync"
 
-	"gitlab.com/mjwhitta/cli"
-	hl "gitlab.com/mjwhitta/hilighter"
-	"gitlab.com/mjwhitta/log"
+	"github.com/mjwhitta/cli"
+	hl "github.com/mjwhitta/hilighter"
+	"github.com/mjwhitta/log"
 )
 
 var count float64

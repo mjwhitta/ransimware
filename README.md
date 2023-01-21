@@ -2,7 +2,7 @@
 
 <a href="https://www.buymeacoffee.com/mjwhitta">🍪 Buy me a cookie</a>
 
-[![Go Report Card](https://goreportcard.com/badge/gitlab.com/mjwhitta/ransimware)](https://goreportcard.com/report/gitlab.com/mjwhitta/ransimware)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mjwhitta/ransimware)](https://goreportcard.com/report/github.com/mjwhitta/ransimware)
 
 ## What is this?
 
@@ -14,7 +14,7 @@ Open a terminal and run the following:
 
 ```
 $ go get --ldflags="-s -w" --trimpath -u \
-    gitlab.com/mjwhitta/ransimware
+    github.com/mjwhitta/ransimware
 ```
 
 ## Usage
@@ -28,7 +28,7 @@ import (
     "os"
     "path/filepath"
 
-    rw "gitlab.com/mjwhitta/ransimware"
+    rw "github.com/mjwhitta/ransimware"
 )
 
 func main() {
@@ -75,7 +75,7 @@ import (
     "path/filepath"
     "strings"
 
-    rw "gitlab.com/mjwhitta/ransimware"
+    rw "github.com/mjwhitta/ransimware"
 )
 
 func main() {
@@ -163,7 +163,7 @@ func main() {
 
 ## Links
 
-- [Source](https://gitlab.com/mjwhitta/ransimware)
+- [Source](https://github.com/mjwhitta/ransimware)
 
 ## TODO
 

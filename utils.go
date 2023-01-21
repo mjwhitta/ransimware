@@ -22,8 +22,8 @@ import (
 	"time"
 
 	ws "github.com/gorilla/websocket"
+	"github.com/mjwhitta/errors"
 	"github.com/mjwhitta/ftp"
-	"gitlab.com/mjwhitta/errors"
 )
 
 // DefaultEncrypt is the default encryption behavior.

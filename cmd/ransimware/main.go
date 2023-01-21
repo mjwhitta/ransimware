@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/mjwhitta/cli"
-	"gitlab.com/mjwhitta/log"
-	rw "gitlab.com/mjwhitta/ransimware"
+	"github.com/mjwhitta/cli"
+	"github.com/mjwhitta/log"
+	rw "github.com/mjwhitta/ransimware"
 )
 
 func main() {

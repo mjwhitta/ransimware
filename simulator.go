@@ -9,11 +9,11 @@ import (
 	"regexp"
 	"time"
 
-	"gitlab.com/mjwhitta/errors"
-	"gitlab.com/mjwhitta/log"
-	"gitlab.com/mjwhitta/pathname"
-	"gitlab.com/mjwhitta/safety"
-	tp "gitlab.com/mjwhitta/threadpool"
+	"github.com/mjwhitta/errors"
+	"github.com/mjwhitta/log"
+	"github.com/mjwhitta/pathname"
+	"github.com/mjwhitta/safety"
+	tp "github.com/mjwhitta/threadpool"
 )
 
 // Simulator is a struct containing all simulation metadata.
