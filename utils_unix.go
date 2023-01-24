@@ -117,7 +117,7 @@ func executeShellScript(
 
 	// Check for error
 	if e != nil {
-		return "", errors.Newf("commnd \"%s\" failed: %w", name, e)
+		return "", errors.Newf("command \"%s\" failed: %w", name, e)
 	}
 
 	return strings.TrimSpace(string(o)), nil
