@@ -5,6 +5,3 @@ build
 cover.out
 local
 tags
-
-cmd/*
-!cmd/ransimware
