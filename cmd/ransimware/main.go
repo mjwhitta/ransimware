@@ -60,12 +60,9 @@ func main() {
 				"ftptest",
 			)
 		} else if strings.HasPrefix(flags.exfil, "http") {
-			sim.Exfil, e = rw.HTTPExfil(
-				flags.exfil,
-				map[string]string{},
-			)
+			sim.Exfil, e = rw.HTTPExfil(flags.exfil, nil)
 		} else if strings.HasPrefix(flags.exfil, "ws") {
-			sim.Exfil, e = rw.WebsocketParallelExfil(flags.exfil)
+			sim.Exfil, e = rw.WebsocketParallelExfil(flags.exfil, nil)
 		}
 		if e != nil {
 			panic(e)

