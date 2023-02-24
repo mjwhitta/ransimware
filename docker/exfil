@@ -1,0 +1,39 @@
+FROM alpine:latest
+
+# Use bash b/c it's better
+RUN apk --no-cache --update add bash && \
+    rm -f -r /tmp/* /var/{cache/apk,tmp}/*
+SHELL ["/bin/bash", "-c"]
+
+COPY ./ /ransimware/
+
+# 1. Install dependencies
+# 2. Clean up unnecessary files and packages
+RUN set -o pipefail && \
+    ( \
+        apk --no-cache --update upgrade && \
+        apk --no-cache --update add \
+            go \
+            shadow \
+            sudo \
+            upx \
+    ) && ( \
+        cd /ransimware && \
+        go build --buildvcs=false --ldflags="-s -w" \
+            -o /usr/local/bin/ --trimpath ./tools/httplistener && \
+        go build --buildvcs=false --ldflags="-s -w" \
+            -o /usr/local/bin/ --trimpath ./tools/wslistener && \
+        upx /usr/local/bin/* \
+    ) && ( \
+        apk del go upx && \
+        rm -f -r /ransimware && \
+        rm -f -r /root/{.cache,go} /tmp/* /var/{cache/apk,tmp}/* \
+    )
+
+# Add scripts
+ADD docker/root/dockerentry /
+RUN chmod 755 /dockerentry
+
+# Set entrypoint
+WORKDIR /
+ENTRYPOINT ["/dockerentry"]

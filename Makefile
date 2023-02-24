@@ -1,4 +1,5 @@
 -include gomk/main.mk
+-include docker/Makefile
 -include local/Makefile
 
 ifneq ($(unameS),Windows)

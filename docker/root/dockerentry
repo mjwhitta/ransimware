@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# Default group (user:1000)
+gid="${DKR_GID:-1000}"
+gname="${DKR_GNAME:-user}"
+
+# Default user (user:1000)
+uid="${DKR_UID:-1000}"
+uname="${DKR_UNAME:-user}"
+
+# If root or UID of 0 provided, just run command
+if [[ $(id -u) -ne 0 ]] || [[ $uid -eq 0 ]]; then
+    exec "$@"
+fi
+
+# Create group, if it doesn't exist
+groupadd -f -g "$gid" -o "$gname" &>/dev/null
+groupmod -g "$gid" -o "$gname" &>/dev/null
+
+# Create user, if they don't exist
+useradd -d /home/user -g "$gid" -mou "$uid" "$uname" &>/dev/null
+usermod -d /home/user -g "$gid" -mou "$uid" "$uname" &>/dev/null
+chown -R "$uid":"$gid" /home/user
+
+# Sudo (a few different ways)
+groupadd -f sudo
+groupadd -f wheel
+usermod -a -G sudo,wheel "$uname"
+mkdir -p /etc/sudoers.d
+echo "$uname ALL=(ALL) NOPASSWD: ALL" >"/etc/sudoers.d/$uname"
+
+# Store cmd
+cmd="$*"
+[[ -n $cmd ]] || cmd="$(command -v bash)"
+[[ -n $cmd ]] || cmd="sh"
+
+# Run command as specified user
+export HOME="/home/user"
+export USER="$uname"
+
+if [[ -n $(command -v sudo) ]]; then
+    # shellcheck disable=SC2086
+    sudo -E -u "$uname" $cmd
+else
+    su -c "$cmd" -m "$uname"
+fi
