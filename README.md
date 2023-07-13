@@ -7,7 +7,8 @@
 
 ## What is this?
 
-This Go module allows you to simulate ransomware.
+This Go module allows you to simulate ransomware. Use
+https://ransomlook.io for ideas on domains and IOCs.
 
 ## How to install
 
