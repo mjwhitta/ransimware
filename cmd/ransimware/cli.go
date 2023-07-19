@@ -43,8 +43,8 @@ func init() {
 	)
 	cli.BugEmail = "ransimware.bugs@whitta.dev"
 	cli.ExitStatus(
-		"Normally the exit status is 0. In the event of an error",
-		"the exit status will be one of the below:\n\n",
+		"Normally the exit status is 0. In the event of an error the",
+		"exit status will be one of the below:\n\n",
 		hl.Sprintf("%d: Invalid option\n", InvalidOption),
 		hl.Sprintf("%d: Missing option\n", MissingOption),
 		hl.Sprintf("%d: Invalid argument\n", InvalidArgument),
