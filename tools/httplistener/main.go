@@ -11,6 +11,7 @@ import (
 	"github.com/mjwhitta/log"
 )
 
+var bytesPerG float64 = 1024 * 1024 * 1024
 var count float64
 var m *sync.Mutex
 var port uint
@@ -22,9 +23,9 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	if showCount {
 		if req.ContentLength > 0 {
+
 			m.Lock()
-			// In GBs
-			count += float64(req.ContentLength) / (1024 * 1024 * 1024)
+			count += float64(req.ContentLength) / bytesPerG // In GBs
 			m.Unlock()
 		}
 
@@ -44,7 +45,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 func init() {
 	cli.Align = true
 	cli.Banner = hl.Sprintf("%s [OPTIONS]", os.Args[0])
-	cli.Info = "Super simple HTTP listener."
+	cli.Info("Super simple HTTP listener.")
 	cli.Flag(&showCount, "c", "count", false, "Show running count.")
 	cli.Flag(&port, "p", "port", 8080, "Listen on specified port.")
 	cli.Parse()

@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/mjwhitta/errors"
-	"github.com/mjwhitta/win/wininet/http"
+	http "github.com/mjwhitta/win/wininet"
 )
 
 func executeBat(

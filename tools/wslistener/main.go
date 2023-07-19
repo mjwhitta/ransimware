@@ -20,7 +20,7 @@ var showCount bool
 func init() {
 	cli.Align = true
 	cli.Banner = hl.Sprintf("%s [OPTIONS]", os.Args[0])
-	cli.Info = "Super simple Websocket listener."
+	cli.Info("Super simple Websocket listener.")
 	cli.Flag(&showCount, "c", "count", false, "Show running count.")
 	cli.Flag(&port, "p", "port", 8080, "Listen on specified port.")
 	cli.Parse()
@@ -77,8 +77,7 @@ func wsHandler(w http.ResponseWriter, req *http.Request) {
 		if showCount {
 			if len(b) > 0 {
 				m.Lock()
-				// In GBs
-				count += float64(len(b)) / bytesPerG
+				count += float64(len(b)) / bytesPerG // In GBs
 				m.Unlock()
 			}
 
