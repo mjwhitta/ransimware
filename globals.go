@@ -1,5 +1,12 @@
 package ransimware
 
+import _ "embed" // Import embed for the DefaultPNG
+
+// DefaultPNG is an example PNG for use with WallpaperNotify().
+//
+//go:embed ransimware.png
+var DefaultPNG []byte
+
 // Desktop wallpaper style consts
 const (
 	DesktopCenter  string = "0"
@@ -22,8 +29,5 @@ type ExfilFunc func(fn string, b []byte) error
 // the user of the ransom.
 type NotifyFunc func() error
 
-// DefaultPNG is an example PNG for use with WallpaperNotify().
-var DefaultPNG []byte
-
 // Version is the package version
-const Version = "0.23.1"
+const Version = "0.24.0"

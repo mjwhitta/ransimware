@@ -138,7 +138,7 @@ func main() {
     sim.Notify = func() error {
         rw.RansomNote(
             filepath.Join(home, "Desktop", "ransomnote.txt"),
-            []string{"This is a ransomware simulation."},
+            "This is a ransomware simulation.",
         )()
 
         rw.WallpaperNotify(

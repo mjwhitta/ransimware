@@ -323,7 +323,7 @@ func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
 
 // RansomNote will return a function pointer to a NotifyFunc that
 // appends the specified text to the specified file.
-func RansomNote(path string, text []string) NotifyFunc {
+func RansomNote(path string, text ...string) NotifyFunc {
 	return func() error {
 		var e error
 		var f *os.File
