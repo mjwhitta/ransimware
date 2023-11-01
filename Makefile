@@ -4,5 +4,5 @@
 
 ifneq ($(unameS),Windows)
 spellcheck:
-	@codespell -f -S ".git,*.pem,png.go"
+	@codespell -f -L hilighter -S ".git,*.pem,png.go"
 endif
