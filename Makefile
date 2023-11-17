@@ -2,7 +2,7 @@
 -include docker/Makefile
 -include local/Makefile
 
-ifneq ($(unameS),Windows)
+ifneq ($(unameS),windows)
 spellcheck:
 	@codespell -f -L hilighter -S ".git,*.pem,png.go"
 endif
