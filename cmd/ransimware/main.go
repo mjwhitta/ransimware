@@ -50,7 +50,7 @@ func main() {
 	}
 
 	if flags.exfil != "" {
-		sim.ExfilFilenames = true
+		sim.ExfilFilenames = flags.names
 		sim.ExfilThreshold = flags.threshold
 
 		if strings.HasPrefix(flags.exfil, "ftp") {

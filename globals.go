@@ -30,4 +30,4 @@ type ExfilFunc func(fn string, b []byte) error
 type NotifyFunc func() error
 
 // Version is the package version
-const Version = "0.24.0"
+const Version = "0.25.0"
