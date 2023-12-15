@@ -42,10 +42,10 @@ func main() {
 	sim.WaitEvery = time.Duration(flags.waitEvery) * time.Second
 	sim.WaitFor = time.Duration(flags.waitFor) * time.Second
 
-	if flags.encrypt {
+	if flags.encrypt != "" {
 		sim.Encrypt = func(fn string, b []byte) ([]byte, error) {
 			println(fn)
-			return rw.AESEncrypt("password")(fn, b)
+			return rw.AESEncrypt(flags.encrypt)(fn, b)
 		}
 	}
 

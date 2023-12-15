@@ -31,7 +31,13 @@ func init() {
 		"Incoming data is base64 encoded (default: true).",
 	)
 	cli.Flag(&showCount, "c", "count", false, "Show running count.")
-	cli.Flag(&port, "p", "port", 8080, "Listen on specified port.")
+	cli.Flag(
+		&port,
+		"p",
+		"port",
+		8080,
+		"Listen on specified port (default: 8080).",
+	)
 	cli.Parse()
 
 	m = &sync.Mutex{}

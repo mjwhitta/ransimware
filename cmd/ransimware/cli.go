@@ -22,7 +22,7 @@ const (
 
 // Flags
 var flags struct {
-	encrypt   bool
+	encrypt   string
 	exfil     string
 	names     bool
 	nocolor   bool
@@ -61,15 +61,17 @@ func init() {
 		&flags.encrypt,
 		"e",
 		"encrypt",
-		false,
-		"Simulate encryption of file contents using AES.",
+		"",
+		"Use specified password to simulate encryption of file",
+		"contents using AES (default: no encryption).",
 	)
 	cli.Flag(
 		&flags.exfil,
 		"x",
 		"exfil",
 		"",
-		"Exfil simulated data to specified location.",
+		"Exfil simulated data to specified location",
+		"(default: no exfil, supports: ftp, http(s), ws(s)).",
 	)
 	cli.Flag(
 		&flags.names,
@@ -89,13 +91,15 @@ func init() {
 		"t",
 		"threads",
 		32,
-		"Use specified thread-pool size for reading files.",
+		"Use specified thread pool size for reading files",
+		"(default: 32).",
 	)
 	cli.Flag(
 		&flags.threshold,
 		"threshold",
 		0,
-		"Stop exfil after specified bytes has been exceeded.",
+		"Stop exfil after specified bytes has been exceeded",
+		"(default: 0 = all).",
 	)
 	cli.Flag(
 		&flags.verbose,
@@ -108,13 +112,15 @@ func init() {
 		&flags.waitEvery,
 		"wait-every",
 		0,
-		"Wait after the specified number of seconds, repeatedly.",
+		"Wait after the specified number of seconds, repeatedly",
+		"(default: 0 = no wait).",
 	)
 	cli.Flag(
 		&flags.waitFor,
 		"wait-for",
 		0,
-		"Wait for the specified number of seconds.",
+		"Wait for the specified number of seconds",
+		"(default: 0 = no wait). Requires --wait-every.",
 	)
 	cli.Flag(&flags.version, "V", "version", false, "Show version.")
 	cli.Parse()
