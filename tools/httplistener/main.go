@@ -12,12 +12,14 @@ import (
 	"github.com/mjwhitta/log"
 )
 
-var b64 bool
-var bytesPerG float64 = 1024 * 1024 * 1024
-var count float64
-var m *sync.Mutex
-var port uint
-var showCount bool
+var (
+	b64       bool
+	bytesPerG float64 = 1024 * 1024 * 1024
+	count     float64
+	m         *sync.Mutex
+	port      uint
+	showCount bool
+)
 
 func handler(w http.ResponseWriter, req *http.Request) {
 	var b []byte

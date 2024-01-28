@@ -38,7 +38,7 @@ type Simulator struct {
 // New will return a pointer to a new Simulator instance.
 func New(threads int) *Simulator {
 	var e error
-	var s = &Simulator{
+	var s *Simulator = &Simulator{
 		count:       safety.NewUint64(),
 		Encrypt:     DefaultEncrypt,
 		Exfil:       DefaultExfil,

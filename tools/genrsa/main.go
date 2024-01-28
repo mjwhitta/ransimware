@@ -46,7 +46,7 @@ func main() {
 
 func printKey(name string, key []byte, w io.Writer) {
 	var b64 string = base64.StdEncoding.EncodeToString(key)
-	var out = []string{
+	var out []string = []string{
 		"package main\n",
 		"import (",
 		"\t\"crypto/rsa\"",

