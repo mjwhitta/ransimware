@@ -12,12 +12,12 @@ require (
 	github.com/mjwhitta/pathname v1.2.5
 	github.com/mjwhitta/safety v1.11.3
 	github.com/mjwhitta/threadpool v1.5.2
-	github.com/mjwhitta/win v0.12.3
-	golang.org/x/sys v0.16.0
+	github.com/mjwhitta/win v0.13.1
+	golang.org/x/sys v0.17.0
 )
 
 require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	golang.org/x/net v0.20.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
 )
