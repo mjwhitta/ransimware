@@ -22,8 +22,8 @@ github.com/mjwhitta/safety v1.11.3 h1:dpg6CIQrlrt8yf/cXEdhPI+vRV6g/cRw8uO/TmUK1M
 github.com/mjwhitta/safety v1.11.3/go.mod h1:K/LrHWgnJlD5vCe0c9tH4E2prhl4Xpl6nBelXAvuXo0=
 github.com/mjwhitta/threadpool v1.5.2 h1:9GOI7WjW0p5LVFeQdwykXce1Kasyoao49RxhX1vZRyE=
 github.com/mjwhitta/threadpool v1.5.2/go.mod h1:2MsfTQKzgENLTlw45Pt34hJpX3TNT39+7lGsFftwa7Q=
-github.com/mjwhitta/win v0.14.2 h1:GvxbQRT/VD2gPAcJKnp0J7572+omLo4czNI3kee4OCA=
-github.com/mjwhitta/win v0.14.2/go.mod h1:EnUY86bUeUqrkM/P0Lbw7o8HXD1TX/ILwpfv3Ktdx/I=
+github.com/mjwhitta/win v0.15.1 h1:Ag2lyySQEozlAObQ95U1G2UcDquNN0TSM0IWAiI7D20=
+github.com/mjwhitta/win v0.15.1/go.mod h1:EnUY86bUeUqrkM/P0Lbw7o8HXD1TX/ILwpfv3Ktdx/I=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 golang.org/x/net v0.21.0 h1:AQyQV4dYCvJ7vGmJyKki9+PBdyvhkSd8EIx/qb0AYv4=
