@@ -1,3 +1,4 @@
+ifneq ($(unameS),windows)
 docker: phony_dummy
 	@docker tag ransimware:exfil ransimware:delete &>/dev/null || true
 	@docker build -f docker/exfil --pull -t ransimware:exfil . || \
@@ -6,6 +7,4 @@ docker: phony_dummy
 	@docker buildx prune -f &>/dev/null || true
 	@docker rmi alpine:exfil &>/dev/null || true
 	@docker rmi ransimware:delete &>/dev/null || true
-
-.PHONY: phony_dummy
-phony_dummy: ;
+endif
