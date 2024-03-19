@@ -5,19 +5,28 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
-	"flag"
 	"io"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/mjwhitta/cli"
+	hl "github.com/mjwhitta/hilighter"
 )
 
 var r *regexp.Regexp
 
 func init() {
-	flag.Parse()
-	r = regexp.MustCompile(`.{1,59}`)
+	cli.Align = true
+	cli.Banner = hl.Sprintf(
+		"%s [OPTIONS] >priv.go 2>pub.go",
+		os.Args[0],
+	)
+	cli.Info("Super simple RSA key generator.")
+	cli.Parse()
+
+	r = regexp.MustCompile(`.{1,58}`)
 }
 
 func main() {
@@ -26,8 +35,8 @@ func main() {
 	var e error
 	var privkey *rsa.PrivateKey
 
-	if flag.NArg() > 0 {
-		if bits, e = strconv.ParseInt(flag.Arg(0), 10, 64); e != nil {
+	if cli.NArg() > 0 {
+		if bits, e = strconv.ParseInt(cli.Arg(0), 10, 64); e != nil {
 			panic(e)
 		}
 	}
@@ -46,13 +55,13 @@ func main() {
 
 func printKey(name string, key []byte, w io.Writer) {
 	var b64 string = base64.StdEncoding.EncodeToString(key)
+	var m []string = r.FindAllString(b64, -1)
 	var out []string = []string{
 		"package main\n",
 		"import (",
 		"\t\"crypto/rsa\"",
 		"\t\"crypto/x509\"",
 		"\t\"encoding/base64\"",
-		"\t\"strings\"",
 		")\n",
 	}
 
@@ -65,45 +74,28 @@ func printKey(name string, key []byte, w io.Writer) {
 
 	out = append(out, "func init() {")
 	out = append(out, "\tvar b []byte")
-	out = append(out, "\tvar b64 = []string{")
-
-	for _, line := range r.FindAllString(b64, -1) {
-		out = append(out, "\t\t\""+line+"\",")
-	}
-
-	out = append(out, "\t}")
-	out = append(out, "\tvar e error\n")
+	out = append(out, "")
 
 	out = append(
 		out,
-		strings.Join(
-			[]string{
-				"\tb, e = base64.StdEncoding.DecodeString(",
-				"strings.Join(b64, \"\")",
-				")",
-			},
-			"",
-		),
+		"\tb, _ = base64.StdEncoding.DecodeString(\"\" +",
 	)
-	out = append(out, "\tif e != nil {")
-	out = append(out, "\t\tpanic(e)")
-	out = append(out, "\t}\n")
+	for i, line := range m {
+		if i == len(m)-1 {
+			out = append(out, "\t\t\""+line+"\",")
+		} else {
+			out = append(out, "\t\t\""+line+"\" +")
+		}
+	}
+	out = append(out, "\t)")
 
 	switch name {
 	case "priv":
-		out = append(
-			out,
-			"\tif priv, e = x509.ParsePKCS1PrivateKey(b); e != nil {",
-		)
+		out = append(out, "\tpriv, _ = x509.ParsePKCS1PrivateKey(b)")
 	case "pub":
-		out = append(
-			out,
-			"\tif pub, e = x509.ParsePKCS1PublicKey(b); e != nil {",
-		)
+		out = append(out, "\tpub, _ = x509.ParsePKCS1PublicKey(b)")
 	}
 
-	out = append(out, "\t\tpanic(e)")
-	out = append(out, "\t}")
 	out = append(out, "}\n")
 
 	io.WriteString(w, strings.Join(out, "\n"))
