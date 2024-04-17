@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/mjwhitta/cli"
+	"github.com/mjwhitta/errors"
 	"github.com/mjwhitta/log"
 	rw "github.com/mjwhitta/ransimware"
 )
@@ -63,6 +64,8 @@ func main() {
 			sim.Exfil, e = rw.HTTPExfil(flags.exfil, nil)
 		} else if strings.HasPrefix(flags.exfil, "ws") {
 			sim.Exfil, e = rw.WebsocketParallelExfil(flags.exfil, nil)
+		} else {
+			e = errors.Newf("unknown exfil protocol: %s", flags.exfil)
 		}
 		if e != nil {
 			panic(e)

