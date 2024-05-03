@@ -62,10 +62,11 @@ func main() {
 	if showCount {
 		hl.Printf("%f GB\n", count)
 	}
+
 	e = server.ListenAndServe()
 
 	switch e {
-	case http.ErrServerClosed:
+	case nil, http.ErrServerClosed:
 	default:
 		panic(e)
 	}

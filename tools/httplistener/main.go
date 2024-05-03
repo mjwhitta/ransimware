@@ -90,13 +90,15 @@ func main() {
 	server = &http.Server{Addr: addr, Handler: mux}
 
 	log.Infof("Listening on %s", addr)
+
 	if showCount {
 		hl.Printf("%f GB\n", count)
 	}
+
 	e = server.ListenAndServe()
 
 	switch e {
-	case http.ErrServerClosed:
+	case nil, http.ErrServerClosed:
 	default:
 		panic(e)
 	}
