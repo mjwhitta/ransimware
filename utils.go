@@ -346,7 +346,7 @@ func HTTPExfil(
 		}
 
 		// Set timeout to 1 second
-		inet.DefaultClient.Timeout(time.Second)
+		inet.DefaultClient.SetTimeout(time.Second)
 
 		for {
 			if n, e = stream.Read(tmp[:]); (n == 0) && (e == io.EOF) {
