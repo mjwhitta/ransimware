@@ -6,6 +6,6 @@
 build
 cover.out
 local
-resource.syso
+resource_windows*.syso
 tags
 vendor
