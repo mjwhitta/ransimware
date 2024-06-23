@@ -49,7 +49,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		log.Good(string(b))
 	}
 
-	w.Write([]byte("Success"))
+	_, _ = w.Write([]byte("Success"))
 }
 
 func init() {

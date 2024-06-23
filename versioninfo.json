@@ -1,0 +1,41 @@
+{
+	"FixedFileInfo": {
+		"FileVersion": {
+			"Major": 0,
+			"Minor": 28,
+			"Patch": 0,
+			"Build": 0
+		},
+		"ProductVersion": {
+			"Major": 0,
+			"Minor": 28,
+			"Patch": 0,
+			"Build": 0
+		},
+		"FileFlagsMask": "3f",
+		"FileFlags ": "00",
+		"FileOS": "040004",
+		"FileType": "01",
+		"FileSubType": "00"
+	},
+	"StringFileInfo": {
+		"Comments": "",
+		"CompanyName": "Nation-State",
+		"FileDescription": "",
+		"FileVersion": "0.28.0.0",
+		"InternalName": "ransimware",
+		"LegalCopyright": "",
+		"LegalTrademarks": "",
+		"OriginalFilename": "ransimware",
+		"PrivateBuild": "",
+		"ProductName": "Ransimware",
+		"ProductVersion": "0.28.0.0",
+		"SpecialBuild": ""
+	},
+	"VarFileInfo": {
+		"Translation": {
+			"LangID": "0409",
+			"CharsetID": "04B0"
+		}
+	}
+}

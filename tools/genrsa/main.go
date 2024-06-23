@@ -98,5 +98,5 @@ func printKey(name string, key []byte, w io.Writer) {
 
 	out = append(out, "}\n")
 
-	io.WriteString(w, strings.Join(out, "\n"))
+	_, _ = io.WriteString(w, strings.Join(out, "\n"))
 }
