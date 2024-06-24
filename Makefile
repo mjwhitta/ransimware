@@ -4,7 +4,7 @@
 
 clean: clean-default
 ifeq ($(unameS),windows)
-ifneq ($(wildcard resource.syso),)
+ifneq ($(wildcard resource_windows*.syso),)
 	@remove-item -force ./resource_windows*.syso
 endif
 else
