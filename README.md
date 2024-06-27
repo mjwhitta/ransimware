@@ -15,8 +15,7 @@ https://ransomlook.io for ideas on domains and IOCs.
 Open a terminal and run the following:
 
 ```
-$ go get --ldflags "-s -w" --trimpath -u \
-    github.com/mjwhitta/ransimware
+$ go get -u github.com/mjwhitta/ransimware
 ```
 
 ## Usage
