@@ -50,8 +50,8 @@ func New(threads int) *Simulator {
 	if _, e = rand.Read(s.OTP[:]); e != nil {
 		// Fallback to hard-coded incrementing bytes
 		s.OTP[0] = 0x41
-		for i := 1; i < 32; i++ {
-			s.OTP[i] = s.OTP[i-1] + 1
+		for i := range len(s.OTP) - 1 {
+			s.OTP[i+1] = s.OTP[i] + 1
 		}
 	}
 

