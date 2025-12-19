@@ -9,12 +9,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"unsafe"
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/mjwhitta/errors"
+	"github.com/mjwhitta/win/desktop"
 )
 
 func executeBat(
@@ -272,23 +272,11 @@ func executeShell(shell string, cmds []string) (string, error) {
 func WallpaperNotify(
 	img string,
 	png []byte,
-	fit string,
+	style uint,
 	clean bool,
 ) NotifyFunc {
 	return func() error {
 		var e error
-		var k registry.Key
-		var spiSetdeskwallpaper uintptr = 0x0014
-		var spifSendchange uintptr = 0x0002
-		var spifUpdateinifile uintptr = 0x0001
-		var user32 *windows.LazyDLL
-
-		if img, e = filepath.Abs(img); e != nil {
-			return errors.Newf(
-				"failed to find absolute path for wallpaper: %w",
-				e,
-			)
-		}
 
 		// Write PNG to file
 		//nolint:mnd // u=rw,go=-
@@ -297,48 +285,11 @@ func WallpaperNotify(
 			return errors.Newf("failed to write to %s: %w", img, e)
 		}
 
-		// Get key
-		k, _, e = registry.CreateKey(
-			registry.CURRENT_USER,
-			filepath.Join("Control Panel", "Desktop"),
-			registry.SET_VALUE,
-		)
-		if e != nil {
-			return errors.Newf("failed to get registry key: %w", e)
+		// Set desktop wallpaper
+		if e = desktop.SetWallpaper(img, style); e != nil {
+			e = errors.Newf("failed to set desktop wallpaper: %w", e)
+			return e
 		}
-
-		// Set wallpaper
-		if e = k.SetStringValue("WallPaper", img); e != nil {
-			return errors.Newf("failed to set wallpaper key: %w", e)
-		}
-
-		// Set style
-		if e = k.SetStringValue("WallpaperStyle", fit); e != nil {
-			return errors.Newf("failed to set style key: %w", e)
-		}
-
-		// Set tiling
-		switch fit {
-		case DesktopTile:
-			e = k.SetStringValue("TileWallpaper", "1")
-		default:
-			e = k.SetStringValue("TileWallpaper", "0")
-		}
-
-		if e != nil {
-			return errors.Newf("failed to set tile key: %w", e)
-		}
-
-		// Change background with Windows API, or try
-		user32 = windows.NewLazySystemDLL("User32")
-
-		//nolint:gosec // G103 - Windows kinda needs unsafe
-		_, _, _ = user32.NewProc("SystemParametersInfoA").Call(
-			spiSetdeskwallpaper,
-			0,
-			uintptr(unsafe.Pointer(&[]byte(img)[0])),
-			spifSendchange|spifUpdateinifile,
-		)
 
 		// Remove image file, if requested
 		if clean {

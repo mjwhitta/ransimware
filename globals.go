@@ -16,18 +16,18 @@ type NotifyFunc func() error
 
 // Desktop wallpaper style consts
 const (
-	DesktopCenter  string = "0"
-	DesktopFill    string = "10"
-	DesktopFit     string = "6"
-	DesktopSpan    string = "22"
-	DesktopStretch string = "2"
-	DesktopTile    string = "0"
+	WallpaperStyleCenter uint = iota
+	WallpaperStyleFill
+	WallpaperStyleFit
+	WallpaperStyleSpan
+	WallpaperStyleStretch
+	WallpaperStyleTile
 )
 
 // Version is the package version
 //
 //nolint:grouper // Separate for grep-ability
-const Version string = "0.30.0"
+const Version string = "0.30.1"
 
 // DefaultPNG is an example PNG for use with WallpaperNotify().
 //

@@ -81,7 +81,7 @@ func configureNotify(sim *rw.Simulator) {
 				_ = rw.WallpaperNotify(
 					filepath.Join(home, "desktop", "ransim.png"),
 					rw.DefaultPNG,
-					rw.DesktopStretch,
+					rw.WallpaperStyleStretch,
 					false,
 				)()
 			}

@@ -133,7 +133,7 @@ func executeShellScript(
 func WallpaperNotify(
 	img string,
 	png []byte,
-	fit string,
+	style uint,
 	clean bool,
 ) NotifyFunc {
 	return func() error {
