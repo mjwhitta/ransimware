@@ -2,13 +2,15 @@ package main
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
+	"time"
 
 	ws "github.com/gorilla/websocket"
 	"github.com/mjwhitta/cli"
-	hl "github.com/mjwhitta/hilighter"
 	"github.com/mjwhitta/log"
 )
 
@@ -21,58 +23,7 @@ var (
 	showCount bool
 )
 
-func init() {
-	cli.Align = true
-	cli.Banner = hl.Sprintf("%s [OPTIONS]", os.Args[0])
-	cli.Info("Super simple Websocket listener.")
-	cli.Flag(
-		&b64,
-		"b",
-		"b64",
-		true,
-		"Incoming data is base64 encoded (default: true).",
-	)
-	cli.Flag(&showCount, "c", "count", false, "Show running count.")
-	cli.Flag(
-		&port,
-		"p",
-		"port",
-		8080,
-		"Listen on specified port (default: 8080).",
-	)
-	cli.Parse()
-
-	m = &sync.Mutex{}
-}
-
-func main() {
-	var addr string
-	var e error
-	var mux *http.ServeMux
-	var server *http.Server
-
-	addr = hl.Sprintf("0.0.0.0:%d", port)
-
-	mux = http.NewServeMux()
-	mux.HandleFunc("/", wsHandler)
-
-	server = &http.Server{Addr: addr, Handler: mux}
-
-	log.Infof("Listening on %s", addr)
-	if showCount {
-		hl.Printf("%f GB\n", count)
-	}
-
-	e = server.ListenAndServe()
-
-	switch e {
-	case nil, http.ErrServerClosed:
-	default:
-		panic(e)
-	}
-}
-
-func wsHandler(w http.ResponseWriter, req *http.Request) {
+func handler(w http.ResponseWriter, req *http.Request) {
 	var b []byte
 	var c *ws.Conn
 	var e error
@@ -95,20 +46,78 @@ func wsHandler(w http.ResponseWriter, req *http.Request) {
 
 		if showCount {
 			if len(b) > 0 {
-				tmp = len(b)
-
-				if b64 {
+				if tmp = len(b); b64 {
 					tmp = base64.StdEncoding.DecodedLen(tmp)
 				}
 
 				m.Lock()
+
 				count += float64(tmp) / bytesPerG // In GBs
+
 				m.Unlock()
 			}
 
-			hl.Printf("\x1b[1A%f GB\n", count)
+			fmt.Printf("\x1b[1A%f GB\n", count)
 		} else {
 			log.Good(string(b))
 		}
+	}
+}
+
+func init() {
+	cli.Align = true
+	cli.Banner = filepath.Base(os.Args[0]) + " [OPTIONS]"
+
+	cli.Info("Super simple Websocket listener.")
+
+	cli.Flag(
+		&b64,
+		"b",
+		"b64",
+		true,
+		"Incoming data is base64 encoded (default: true).",
+	)
+	cli.Flag(&showCount, "c", "count", false, "Show running count.")
+	cli.Flag(
+		&port,
+		"p",
+		"port",
+		8080, //nolint:mnd // Default non-privileged HTTP port
+		"Listen on specified port (default: 8080).",
+	)
+	cli.Parse()
+
+	m = &sync.Mutex{}
+}
+
+func main() {
+	var addr string
+	var e error
+	var mux *http.ServeMux
+	var server *http.Server
+
+	addr = fmt.Sprintf("0.0.0.0:%d", port)
+
+	mux = http.NewServeMux()
+	mux.HandleFunc("/", handler)
+
+	server = &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second, //nolint:mnd // 10 secs
+	}
+
+	log.Infof("Listening on %s", addr)
+
+	if showCount {
+		fmt.Printf("%f GB\n", count)
+	}
+
+	e = server.ListenAndServe()
+
+	switch e {
+	case nil, http.ErrServerClosed:
+	default:
+		panic(e)
 	}
 }

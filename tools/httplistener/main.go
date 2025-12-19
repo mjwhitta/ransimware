@@ -2,13 +2,15 @@ package main
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/mjwhitta/cli"
-	hl "github.com/mjwhitta/hilighter"
 	"github.com/mjwhitta/log"
 )
 
@@ -28,18 +30,18 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	if showCount {
 		if req.ContentLength > 0 {
-			tmp = int(req.ContentLength)
-
-			if b64 {
+			if tmp = int(req.ContentLength); b64 {
 				tmp = base64.StdEncoding.DecodedLen(tmp)
 			}
 
 			m.Lock()
+
 			count += float64(tmp) / bytesPerG // In GBs
+
 			m.Unlock()
 		}
 
-		hl.Printf("\x1b[1A%f GB\n", count)
+		fmt.Printf("\x1b[1A%f GB\n", count)
 	} else {
 		if b, e = httputil.DumpRequest(req, true); e != nil {
 			log.Err(e.Error())
@@ -54,8 +56,10 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 func init() {
 	cli.Align = true
-	cli.Banner = hl.Sprintf("%s [OPTIONS]", os.Args[0])
+	cli.Banner = filepath.Base(os.Args[0]) + " [OPTIONS]"
+
 	cli.Info("Super simple HTTP listener.")
+
 	cli.Flag(
 		&b64,
 		"b",
@@ -68,7 +72,7 @@ func init() {
 		&port,
 		"p",
 		"port",
-		8080,
+		8080, //nolint:mnd // Default non-privileged HTTP port
 		"Listen on specified port (default: 8080).",
 	)
 	cli.Parse()
@@ -82,17 +86,21 @@ func main() {
 	var mux *http.ServeMux
 	var server *http.Server
 
-	addr = hl.Sprintf("0.0.0.0:%d", port)
+	addr = fmt.Sprintf("0.0.0.0:%d", port)
 
 	mux = http.NewServeMux()
 	mux.HandleFunc("/", handler)
 
-	server = &http.Server{Addr: addr, Handler: mux}
+	server = &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second, //nolint:mnd // 10 secs
+	}
 
 	log.Infof("Listening on %s", addr)
 
 	if showCount {
-		hl.Printf("%f GB\n", count)
+		fmt.Printf("%f GB\n", count)
 	}
 
 	e = server.ListenAndServe()

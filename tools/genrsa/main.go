@@ -7,33 +7,30 @@ import (
 	"encoding/base64"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/mjwhitta/cli"
-	hl "github.com/mjwhitta/hilighter"
 )
 
-var r *regexp.Regexp
+var reWrap *regexp.Regexp = regexp.MustCompile(`.{1,58}`)
 
 func init() {
 	cli.Align = true
-	cli.Banner = hl.Sprintf(
-		"%s [OPTIONS] >priv.go 2>pub.go",
-		os.Args[0],
-	)
+	cli.Banner = "" +
+		filepath.Base(os.Args[0]) + " [OPTIONS] >priv.go 2>pub.go"
+
 	cli.Info("Super simple RSA key generator.")
 	cli.Parse()
-
-	r = regexp.MustCompile(`.{1,58}`)
 }
 
 func main() {
 	var b []byte
 	var bits int64 = 4096
 	var e error
-	var privkey *rsa.PrivateKey
+	var privKey *rsa.PrivateKey
 
 	if cli.NArg() > 0 {
 		if bits, e = strconv.ParseInt(cli.Arg(0), 10, 64); e != nil {
@@ -41,62 +38,57 @@ func main() {
 		}
 	}
 
-	privkey, e = rsa.GenerateKey(rand.Reader, int(bits))
+	privKey, e = rsa.GenerateKey(rand.Reader, int(bits))
 	if e != nil {
 		panic(e)
 	}
 
-	b = x509.MarshalPKCS1PrivateKey(privkey)
+	b = x509.MarshalPKCS1PrivateKey(privKey)
 	printKey("priv", b, os.Stdout)
 
-	b = x509.MarshalPKCS1PublicKey(&privkey.PublicKey)
+	b = x509.MarshalPKCS1PublicKey(&privKey.PublicKey)
 	printKey("pub", b, os.Stderr)
 }
 
 func printKey(name string, key []byte, w io.Writer) {
 	var b64 string = base64.StdEncoding.EncodeToString(key)
-	var m []string = r.FindAllString(b64, -1)
-	var out []string = []string{
-		"package main\n",
-		"import (",
-		"\t\"crypto/rsa\"",
-		"\t\"crypto/x509\"",
-		"\t\"encoding/base64\"",
-		")\n",
-	}
+	var m []string = reWrap.FindAllString(b64, -1)
+	var sb strings.Builder
+
+	sb.WriteString("package main\n\n")
+	sb.WriteString("import (\n")
+	sb.WriteString("\t\"crypto/rsa\"\n")
+	sb.WriteString("\t\"crypto/x509\"\n")
+	sb.WriteString("\t\"encoding/base64\"\n")
+	sb.WriteString(")\n\n")
 
 	switch name {
 	case "priv":
-		out = append(out, "var priv *rsa.PrivateKey\n")
+		sb.WriteString("var priv *rsa.PrivateKey\n\n")
 	case "pub":
-		out = append(out, "var pub *rsa.PublicKey\n")
+		sb.WriteString("var pub *rsa.PublicKey\n\n")
 	}
 
-	out = append(out, "func init() {")
-	out = append(out, "\tvar b []byte")
-	out = append(out, "")
-
-	out = append(
-		out,
-		"\tb, _ = base64.StdEncoding.DecodeString(\"\" +",
+	sb.WriteString("func init() {\n")
+	sb.WriteString("\tvar b []byte\n\n")
+	sb.WriteString(
+		"\tb, _ = base64.StdEncoding.DecodeString(\"\"",
 	)
-	for i, line := range m {
-		if i == len(m)-1 {
-			out = append(out, "\t\t\""+line+"\",")
-		} else {
-			out = append(out, "\t\t\""+line+"\" +")
-		}
+
+	for _, line := range m {
+		sb.WriteString(" +\n\t\t\"" + line + "\"")
 	}
-	out = append(out, "\t)")
+
+	sb.WriteString(",\n\t)\n\n")
 
 	switch name {
 	case "priv":
-		out = append(out, "\tpriv, _ = x509.ParsePKCS1PrivateKey(b)")
+		sb.WriteString("\tpriv, _ = x509.ParsePKCS1PrivateKey(b)\n")
 	case "pub":
-		out = append(out, "\tpub, _ = x509.ParsePKCS1PublicKey(b)")
+		sb.WriteString("\tpub, _ = x509.ParsePKCS1PublicKey(b)\n")
 	}
 
-	out = append(out, "}\n")
+	sb.WriteString("}\n")
 
-	_, _ = io.WriteString(w, strings.Join(out, "\n"))
+	_, _ = io.WriteString(w, sb.String())
 }

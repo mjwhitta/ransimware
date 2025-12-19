@@ -2,14 +2,14 @@
   "FixedFileInfo": {
     "FileVersion": {
       "Major": 0,
-      "Minor": 29,
-      "Patch": 2,
+      "Minor": 30,
+      "Patch": 0,
       "Build": 0
     },
     "ProductVersion": {
       "Major": 0,
-      "Minor": 29,
-      "Patch": 2,
+      "Minor": 30,
+      "Patch": 0,
       "Build": 0
     },
     "FileFlagsMask": "3f",
@@ -22,14 +22,14 @@
     "Comments": "",
     "CompanyName": "Nation-State",
     "FileDescription": "",
-    "FileVersion": "0.29.2.0",
+    "FileVersion": "0.30.0.0",
     "InternalName": "ransimware",
     "LegalCopyright": "",
     "LegalTrademarks": "",
     "OriginalFilename": "ransimware",
     "PrivateBuild": "",
     "ProductName": "Ransimware",
-    "ProductVersion": "0.29.2.0",
+    "ProductVersion": "0.30.0.0",
     "SpecialBuild": ""
   },
   "VarFileInfo": {

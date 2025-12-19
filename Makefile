@@ -13,5 +13,5 @@ endif
 
 ifneq ($(unameS),windows)
 spellcheck:
-	@codespell -f -L hilighter -S ".git,*.pem,png.go"
+	@codespell -f -L hilighter -S "*.pem,.git,go.*,gomk,png.go"
 endif

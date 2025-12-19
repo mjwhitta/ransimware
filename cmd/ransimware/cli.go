@@ -1,7 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/mjwhitta/cli"
 	hl "github.com/mjwhitta/hilighter"
@@ -26,34 +30,36 @@ var flags struct {
 	exfil     string
 	names     bool
 	nocolor   bool
+	note      string
 	threads   int
 	threshold uint64
 	verbose   bool
 	version   bool
-	waitEvery uint
-	waitFor   uint
+	waitEvery int64
+	waitFor   int64
+	wallpaper bool
 }
 
 func init() {
 	// Configure cli package
 	cli.Align = true
 	cli.Authors = []string{"Miles Whittaker <mj@whitta.dev>"}
-	cli.Banner = hl.Sprintf(
-		"%s [OPTIONS] [dir1]... [dirN]",
-		os.Args[0],
-	)
+	cli.Banner = "" +
+		filepath.Base(os.Args[0]) + " [OPTIONS] [dir1]... [dirN]"
 	cli.BugEmail = "ransimware.bugs@whitta.dev"
+
 	cli.ExitStatus(
 		"Normally the exit status is 0. In the event of an error the",
 		"exit status will be one of the below:\n\n",
-		hl.Sprintf("%d: Invalid option\n", InvalidOption),
-		hl.Sprintf("%d: Missing option\n", MissingOption),
-		hl.Sprintf("%d: Invalid argument\n", InvalidArgument),
-		hl.Sprintf("%d: Missing argument\n", MissingArgument),
-		hl.Sprintf("%d: Extra argument\n", ExtraArgument),
-		hl.Sprintf("%d: Exception", Exception),
+		fmt.Sprintf("%d: Invalid option\n", InvalidOption),
+		fmt.Sprintf("%d: Missing option\n", MissingOption),
+		fmt.Sprintf("%d: Invalid argument\n", InvalidArgument),
+		fmt.Sprintf("%d: Missing argument\n", MissingArgument),
+		fmt.Sprintf("%d: Extra argument\n", ExtraArgument),
+		fmt.Sprintf("%d: Exception", Exception),
 	)
 	cli.Info("Simulate common ransomware behavior and techniques.")
+
 	cli.Title = "Ransimware"
 
 	// Parse cli flags
@@ -71,7 +77,7 @@ func init() {
 		"exfil",
 		"",
 		"Exfil simulated data to specified location",
-		"(default: no exfil, supports: ftp, http(s), ws(s)).",
+		"(default: no exfil, supports: dns, ftp, http(s), ws(s)).",
 	)
 	cli.Flag(
 		&flags.names,
@@ -90,9 +96,9 @@ func init() {
 		&flags.threads,
 		"t",
 		"threads",
-		32,
+		8, //nolint:mnd // 8 threads
 		"Use specified thread pool size for reading files",
-		"(default: 32).",
+		"(default: 8).",
 	)
 	cli.Flag(
 		&flags.threshold,
@@ -112,8 +118,8 @@ func init() {
 		&flags.waitEvery,
 		"wait-every",
 		0,
-		"Wait after the specified number of seconds, repeatedly",
-		"(default: 0 = no wait).",
+		"Wait every specified number of seconds",
+		"(default: 0 = no wait). Requires --wait-for.",
 	)
 	cli.Flag(
 		&flags.waitFor,
@@ -123,6 +129,31 @@ func init() {
 		"(default: 0 = no wait). Requires --wait-every.",
 	)
 	cli.Flag(&flags.version, "V", "version", false, "Show version.")
+
+	switch runtime.GOOS {
+	case "windows":
+		cli.Flag(
+			&flags.note,
+			"note",
+			"",
+			"Leave a ransom note on the user's Desktop.",
+		)
+		cli.Flag(
+			&flags.wallpaper,
+			"w",
+			"wallpaper",
+			false,
+			"Change the user's desktop wallpaper.",
+		)
+	default:
+		cli.Flag(
+			&flags.note,
+			"note",
+			"",
+			"Leave a ransom note in the user's home directory.",
+		)
+	}
+
 	cli.Parse()
 }
 
@@ -132,11 +163,26 @@ func validate() {
 
 	// Short circuit if version was requested
 	if flags.version {
-		hl.Printf("ransimware version %s\n", rw.Version)
+		fmt.Println(
+			filepath.Base(os.Args[0]) + " version " + rw.Version,
+		)
 		os.Exit(Good)
 	}
 
-	if flags.threads <= 0 {
-		log.ErrX(InvalidArgument, "Threads must be > 0")
+	if strings.TrimSpace(flags.note) == "" {
+		flags.note = ""
+	}
+
+	switch {
+	case flags.threads <= 0:
+		log.ErrX(InvalidArgument, "--threads must be > 0")
+	case flags.waitEvery < 0:
+		log.ErrX(InvalidArgument, "--wait-every must be >= 0")
+	case flags.waitFor < 0:
+		log.ErrX(InvalidArgument, "--wait-for must be >= 0")
+	case (flags.waitEvery > 0) && (flags.waitFor == 0):
+		log.ErrX(InvalidArgument, "--wait-every requires --wait-for")
+	case (flags.waitEvery == 0) && (flags.waitFor > 0):
+		log.ErrX(InvalidArgument, "--wait-for requires --wait-every")
 	}
 }

@@ -22,8 +22,8 @@ func executeBat(
 	cmds []string,
 	clean bool,
 ) (string, error) {
+	var b []byte
 	var e error
-	var o []byte
 
 	// Create bat script
 	if e = writeScript(name, cmds); e != nil {
@@ -31,11 +31,11 @@ func executeBat(
 	}
 
 	// Run bat script
-	o, e = exec.Command(name).Output()
+	b, e = exec.Command(name).Output()
 
 	// Clean up, if requested
 	if clean {
-		os.Remove(name)
+		_ = os.Remove(name)
 	}
 
 	// Check for error
@@ -43,7 +43,7 @@ func executeBat(
 		return "", errors.Newf("command \"%s\" failed: %w", name, e)
 	}
 
-	return strings.TrimSpace(string(o)), nil
+	return strings.TrimSpace(string(b)), nil
 }
 
 func executePS1(
@@ -51,47 +51,29 @@ func executePS1(
 	cmds []string,
 	clean bool,
 ) (string, error) {
+	var b []byte
 	var e error
-	var o []byte
-	var old string
 
 	// Create ps1 script
 	if e = writeScript(name, cmds); e != nil {
 		return "", e
 	}
 
-	if clean {
-		old, _ = executeShell(
-			"powershell",
-			[]string{"Get-ExecutionPolicy -Scope CurrentUser"},
-		)
-	}
-
 	// Allow unsigned scripts to run
 	_, e = executeShell(
 		"powershell",
-		[]string{"Set-ExecutionPolicy -Scope CurrentUser Bypass"},
+		[]string{"Set-ExecutionPolicy -Scope Process Bypass"},
 	)
 	if e != nil {
 		return "", e
 	}
 
 	// Run ps1 script
-	o, e = exec.Command("powershell", "-File", name).Output()
+	b, e = exec.Command("powershell", "-File", name).Output()
 
 	// Clean up, if requested
 	if clean {
-		os.Remove(name)
-
-		// Restore old policy, or try
-		if old != "" {
-			executeShell(
-				"powershell",
-				[]string{
-					"Set-ExecutionPolicy -Scope CurrentUser " + old,
-				},
-			)
-		}
+		_ = os.Remove(name)
 	}
 
 	// Check for error
@@ -99,14 +81,14 @@ func executePS1(
 		return "", errors.Newf("command \"%s\" failed: %w", name, e)
 	}
 
-	return strings.TrimSpace(string(o)), nil
+	return strings.TrimSpace(string(b)), nil
 }
 
 func executeRegistry(cmds []string, clean bool) (string, error) {
+	var b []byte
 	var e error
 	var found bool
 	var k registry.Key
-	var o []byte
 	var old string
 	var out []string
 
@@ -117,27 +99,33 @@ func executeRegistry(cmds []string, clean bool) (string, error) {
 		registry.QUERY_VALUE|registry.SET_VALUE,
 	)
 	if e != nil {
-		return "", e
+		return "", errors.Newf("failed to create key: %w", e)
 	}
 
 	// Get old value
 	if found {
-		old, _, _ = k.GetStringValue("AutoRun")
+		if old, _, _ = k.GetStringValue("AutoRun"); old != "" {
+			defer func() {
+				// Restore old value
+				_ = k.SetStringValue("AutoRun", old)
+			}()
+		}
 	}
 
 	for _, cmd := range cmds {
 		// Set new value
 		if e = k.SetStringValue("AutoRun", cmd); e != nil {
+			e = errors.Newf("failed to set AutoRun value: %w", e)
 			return "", e
 		}
 
 		// Run cmd
-		o, e = exec.Command("cmd", "/C", "echo off").Output()
+		b, e = exec.Command("cmd", "/C", "echo off").Output()
 		if e != nil {
 			return strings.Join(out, "\n"), e
 		}
 
-		out = append(out, strings.TrimSpace(string(o)))
+		out = append(out, strings.TrimSpace(string(b)))
 	}
 
 	if !clean {
@@ -158,11 +146,6 @@ func executeRegistry(cmds []string, clean bool) (string, error) {
 		if e != nil {
 			return strings.Join(out, "\n"), e
 		}
-	} else if old != "" {
-		// Restore old value
-		if e = k.SetStringValue("AutoRun", old); e != nil {
-			return strings.Join(out, "\n"), e
-		}
 	} else {
 		// Delete new value if no old value
 		if e = k.DeleteValue("AutoRun"); e != nil {
@@ -174,7 +157,19 @@ func executeRegistry(cmds []string, clean bool) (string, error) {
 }
 
 // ExecuteScript will run shell commands using the provided method, as
-// well as attempt to clean up artifacts, if requested.
+// well as attempt to clean up artifacts, if requested. Supported
+// methods include:
+//   - b64powershell (takes commands)
+//   - bat (will write and run script, takes name and commands)
+//   - cmd (takes commands)
+//   - encpowershell (same as b64powershell)
+//   - encpsh (same as b64powershell)
+//   - powershell (takes commands)
+//   - ps1 (will write and run script, takes name and commands)
+//   - psh (same as powershell)
+//   - reg (same as registry)
+//   - registry (will write registry keys, takes commands)
+//   - shell (same as cmd)
 func ExecuteScript(
 	method string,
 	clean bool,
@@ -185,17 +180,17 @@ func ExecuteScript(
 	}
 
 	switch method {
-	case "b64powershell":
-		return executeShell("b64powershell", cmds)
+	case "b64powershell", "encpowershell", "encpsh":
+		return executeShell("encpowershell", cmds)
 	case "bat":
 		return executeBat(cmds[0], cmds[1:], clean)
 	case "cmd", "shell":
 		return executeShell("cmd", cmds)
-	case "powershell":
+	case "powershell", "psh":
 		return executeShell("powershell", cmds)
 	case "ps1":
 		return executePS1(cmds[0], cmds[1:], clean)
-	case "registry":
+	case "reg", "registry":
 		return executeRegistry(cmds, clean)
 	default:
 		return "", errors.Newf("unsupported method: %s", method)
@@ -203,35 +198,44 @@ func ExecuteScript(
 }
 
 func executeShell(shell string, cmds []string) (string, error) {
+	var b []byte
 	var b64 string
 	var e error
 	var flag string
-	var o []byte
+	var oneline strings.Builder
 	var out []string
-	var tmp string
 	var utf8 []byte
 	var utf16 []uint16
 
 	switch shell {
-	case "b64powershell":
+	case "encpowershell", "powershell":
 		for _, cmd := range cmds {
-			tmp += strings.TrimSpace(cmd)
+			cmd = strings.TrimSpace(cmd)
+			oneline.WriteString(cmd)
 
-			if !strings.HasSuffix(tmp, "{") &&
-				!strings.HasSuffix(tmp, ";") {
-				tmp += ";"
+			if !strings.HasSuffix(cmd, "{") &&
+				!strings.HasSuffix(cmd, ";") {
+				oneline.WriteString(";")
 			}
 		}
+	}
 
-		if utf16, e = windows.UTF16FromString(tmp); e != nil {
+	switch shell {
+	case "cmd":
+		flag = "/C"
+	case "encpowershell":
+		utf16, e = windows.UTF16FromString(oneline.String())
+		if e != nil {
 			e = errors.Newf(
 				"failed to convert %s to Windows type: %w",
-				tmp,
+				oneline.String(),
 				e,
 			)
+
 			return "", e
 		}
 
+		//nolint:mnd // utf16 = utf8 * 2
 		utf8 = make([]byte, 2*len(utf16)-2)
 		for i, b16 := range utf16[:len(utf16)-1] {
 			binary.LittleEndian.PutUint16(utf8[2*i:2*(i+1)], b16)
@@ -241,9 +245,8 @@ func executeShell(shell string, cmds []string) (string, error) {
 		cmds = []string{b64}
 		flag = "-e"
 		shell = "powershell"
-	case "cmd":
-		flag = "/C"
 	case "powershell":
+		cmds = []string{oneline.String()}
 		flag = "-c"
 	default:
 		return "", errors.Newf("unsupported shell: %s", shell)
@@ -251,13 +254,14 @@ func executeShell(shell string, cmds []string) (string, error) {
 
 	// Run cmds
 	for _, cmd := range cmds {
-		if o, e = exec.Command(shell, flag, cmd).Output(); e != nil {
+		//nolint:gosec // G204 - That's the whole point
+		if b, e = exec.Command(shell, flag, cmd).Output(); e != nil {
 			e = errors.Newf("command \"%s\" failed: %w", cmd, e)
 			return strings.Join(out, "\n"), e
 		}
 
-		if len(o) > 0 {
-			out = append(out, strings.TrimSpace(string(o)))
+		if len(b) > 0 {
+			out = append(out, strings.TrimSpace(string(b)))
 		}
 	}
 
@@ -273,23 +277,25 @@ func WallpaperNotify(
 ) NotifyFunc {
 	return func() error {
 		var e error
-		var f *os.File
 		var k registry.Key
 		var spiSetdeskwallpaper uintptr = 0x0014
 		var spifSendchange uintptr = 0x0002
 		var spifUpdateinifile uintptr = 0x0001
 		var user32 *windows.LazyDLL
 
-		// Write PNG to file
-		if f, e = os.Create(img); e != nil {
-			return errors.Newf("failed to create %s: %w", img, e)
+		if img, e = filepath.Abs(img); e != nil {
+			return errors.Newf(
+				"failed to find absolute path for wallpaper: %w",
+				e,
+			)
 		}
 
-		if _, e = f.Write(png); e != nil {
+		// Write PNG to file
+		//nolint:mnd // u=rw,go=-
+		e = os.WriteFile(filepath.Clean(img), png, 0o600)
+		if e != nil {
 			return errors.Newf("failed to write to %s: %w", img, e)
 		}
-
-		f.Close()
 
 		// Get key
 		k, _, e = registry.CreateKey(
@@ -318,13 +324,16 @@ func WallpaperNotify(
 		default:
 			e = k.SetStringValue("TileWallpaper", "0")
 		}
+
 		if e != nil {
 			return errors.Newf("failed to set tile key: %w", e)
 		}
 
 		// Change background with Windows API, or try
 		user32 = windows.NewLazySystemDLL("User32")
-		user32.NewProc("SystemParametersInfoA").Call(
+
+		//nolint:gosec // G103 - Windows kinda needs unsafe
+		_, _, _ = user32.NewProc("SystemParametersInfoA").Call(
 			spiSetdeskwallpaper,
 			0,
 			uintptr(unsafe.Pointer(&[]byte(img)[0])),
@@ -333,22 +342,25 @@ func WallpaperNotify(
 
 		// Remove image file, if requested
 		if clean {
-			os.Remove(img)
+			_ = os.Remove(img)
 		}
 
 		return nil
 	}
 }
 
-func writeScript(name string, cmds []string) error {
-	var e error
+func writeScript(name string, cmds []string) (e error) {
 	var f *os.File
 
 	// Open script
-	if f, e = os.Create(name); e != nil {
+	if f, e = os.Create(filepath.Clean(name)); e != nil {
 		return errors.Newf("failed to create %s: %w", name, e)
 	}
-	defer f.Close()
+	defer func() {
+		if e == nil {
+			e = f.Close()
+		}
+	}()
 
 	// Write script
 	for _, cmd := range cmds {
