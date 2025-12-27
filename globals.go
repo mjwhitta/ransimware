@@ -14,7 +14,12 @@ type ExfilFunc func(fn string, b []byte) error
 // the user of the ransom.
 type NotifyFunc func() error
 
+// Version is the package version
+const Version string = "0.30.2"
+
 // Desktop wallpaper style consts
+//
+//nolint:grouper // Separate b/c enum/iota
 const (
 	WallpaperStyleCenter uint = iota
 	WallpaperStyleFill
@@ -23,11 +28,6 @@ const (
 	WallpaperStyleStretch
 	WallpaperStyleTile
 )
-
-// Version is the package version
-//
-//nolint:grouper // Separate for grep-ability
-const Version string = "0.30.1"
 
 // DefaultPNG is an example PNG for use with WallpaperNotify().
 //
