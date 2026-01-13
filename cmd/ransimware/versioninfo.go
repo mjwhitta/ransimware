@@ -1,3 +1,3 @@
-package ransimware
+package main
 
 //go:generate goversioninfo --platform-specific

@@ -5,10 +5,10 @@
 clean: clean-default
 ifeq ($(unameS),windows)
 ifneq ($(wildcard resource_windows*.syso),)
-	@remove-item -force ./resource_windows*.syso
+	@remove-item -force ./cmd/*/resource_windows*.syso
 endif
 else
-	@rm -f ./resource_windows*.syso
+	@rm -f ./cmd/*/resource_windows*.syso
 endif
 
 ifneq ($(unameS),windows)
