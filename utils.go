@@ -355,7 +355,6 @@ func HTTPExfil(dst string, headers map[string]string) ExfilFunc {
 
 		if t, ok := http.DefaultTransport.(*http.Transport); ok {
 			if t.TLSClientConfig == nil {
-				//nolint:gosec // G402 - Not a problem
 				t.TLSClientConfig = &tls.Config{}
 			}
 

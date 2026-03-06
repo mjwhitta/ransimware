@@ -69,6 +69,7 @@ func executePS1(
 	}
 
 	// Run ps1 script
+	//nolint:gosec // G204 - that's the whole point
 	b, e = exec.Command("powershell", "-File", name).Output()
 
 	// Clean up, if requested
