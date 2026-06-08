@@ -27,23 +27,6 @@ import (
 	"github.com/mjwhitta/inet"
 )
 
-var (
-	// DefaultEncrypt is the default encryption behavior.
-	DefaultEncrypt = func(path string, b []byte) ([]byte, error) {
-		return b, nil
-	}
-
-	// DefaultExfil is the default exfil behavior.
-	DefaultExfil = func(path string, b []byte) error {
-		return nil
-	}
-
-	// DefaultNotify is the default notify behavior.
-	DefaultNotify = func() error {
-		return nil
-	}
-)
-
 // AESDecrypt will return a function pointer to an EncryptFunc that
 // actually decrypts using the specified password.
 func AESDecrypt(passwd string) EncryptFunc {
